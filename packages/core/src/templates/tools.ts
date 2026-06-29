@@ -382,3 +382,53 @@ export const nginxTemplate = (config: SetupConfig['nginx']): string => {
   script += `log_success "Nginx configuré avec succès !"\n`;
   return script;
 };
+
+export const checklistTemplate = (config: SetupConfig['checklist']): string => {
+  if (!config.install || !config.tasks || config.tasks.length === 0) return '';
+  let script = `\n# --- Liste des tâches post-installation ---\n`;
+  script += `log_warning "=== CHOSES A FAIRE (POST-INSTALLATION) ==="\n`;
+  for (const task of config.tasks) {
+    script += `echo "  [ ] ${task}"\n`;
+  }
+  script += `log_warning "==========================================="\n`;
+  return script;
+};
+
+export const agyTemplate = (config: SetupConfig['agy']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de agy CLI ---\n`;
+  script += `if ! has_command agy; then\n`;
+  script += `    log_info "Téléchargement et installation de agy CLI..."\n`;
+  script += `    curl -fsSL https://antigravity.google/install-agy.sh | bash\n`;
+  script += `else\n`;
+  script += `    log_info "agy CLI est déjà installé."\n`;
+  script += `fi\n`;
+  script += `log_success "agy CLI installé avec succès !"\n`;
+  return script;
+};
+
+export const antigravityTemplate = (config: SetupConfig['antigravity']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de Google Antigravity ---\n`;
+  script += `if ! has_command antigravity; then\n`;
+  script += `    log_info "Téléchargement et installation de Google Antigravity..."\n`;
+  script += `    curl -fsSL https://antigravity.google/install.sh | bash\n`;
+  script += `else\n`;
+  script += `    log_info "Google Antigravity est déjà installé."\n`;
+  script += `fi\n`;
+  script += `log_success "Google Antigravity installé avec succès !"\n`;
+  return script;
+};
+
+export const opencodeTemplate = (config: SetupConfig['opencode']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de OpenCode ---\n`;
+  script += `if ! has_command opencode; then\n`;
+  script += `    log_info "Téléchargement et installation de OpenCode..."\n`;
+  script += `    curl -fsSL https://opencode.dev/install.sh | bash\n`;
+  script += `else\n`;
+  script += `    log_info "OpenCode est déjà installé."\n`;
+  script += `fi\n`;
+  script += `log_success "OpenCode installé avec succès !"\n`;
+  return script;
+};

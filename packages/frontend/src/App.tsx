@@ -30,7 +30,8 @@ import {
   Database,
   Globe,
   Anchor,
-  Grid
+  Grid,
+  ListTodo
 } from 'lucide-react';
 
 // Map of Lego-themed styling classes and meta information for each tool
@@ -47,6 +48,10 @@ const TOOLS_META: ToolMeta[] = [
   { id: 'git', name: 'Git', desc: 'Configuration identité et init de dépôts', icon: GitBranch, colorClass: 'lego-orange' },
   { id: 'ghcli', name: 'GitHub CLI', desc: 'Outil de ligne de commande GitHub (gh)', icon: GitPullRequest, colorClass: 'lego-orange' },
   { id: 'zsh', name: 'Zsh & Shell', desc: 'Installe Zsh, Oh My Zsh et thèmes', icon: Cpu, colorClass: 'lego-yellow' },
+  { id: 'checklist', name: 'Liste de tâches', desc: 'Rappels post-install', icon: ListTodo, colorClass: 'lego-yellow' },
+  { id: 'antigravity', name: 'Antigravity', desc: 'Framework d\'agents IA Google Antigravity', icon: Flame, colorClass: 'lego-red' },
+  { id: 'agy', name: 'agy CLI', desc: 'Interface CLI pour piloter Antigravity', icon: Terminal, colorClass: 'lego-orange' },
+  { id: 'opencode', name: 'OpenCode', desc: 'Assistant autonome de dev OpenCode', icon: Code, colorClass: 'lego-green' },
   { id: 'docker', name: 'Docker', desc: 'Moteur Docker et Docker Compose', icon: Container, colorClass: 'lego-blue' },
   { id: 'node', name: 'Node.js', desc: 'Versions Node via NVM/FNM et pkgs', icon: Code, colorClass: 'lego-green' },
   { id: 'python', name: 'Python', desc: 'Python 3, Poetry et gestionnaire Pyenv', icon: Binary, colorClass: 'lego-indigo' },
@@ -62,8 +67,14 @@ const TOOLS_META: ToolMeta[] = [
 ];
 
 function App() {
-  const [config, setConfig] = useState<SetupConfig>(DEFAULT_CONFIG);
-  const [activeTools, setActiveTools] = useState<string[]>(['system', 'git']);
+  // Pre-load active blocks for system, git, antigravity, agy, opencode to match user's default request
+  const [config, setConfig] = useState<SetupConfig>({
+    ...DEFAULT_CONFIG,
+    antigravity: { install: true },
+    agy: { install: true },
+    opencode: { install: true }
+  });
+  const [activeTools, setActiveTools] = useState<string[]>(['system', 'git', 'antigravity', 'agy', 'opencode']);
   const [activeModalTool, setActiveModalTool] = useState<string | null>(null);
   const [script, setScript] = useState<string>('');
   const [copied, setCopied] = useState(false);
@@ -79,6 +90,10 @@ function App() {
     if (cfg.git?.configure) active.push('git');
     if (cfg.ghcli?.install) active.push('ghcli');
     if (cfg.zsh?.install) active.push('zsh');
+    if (cfg.checklist?.install) active.push('checklist');
+    if (cfg.agy?.install) active.push('agy');
+    if (cfg.antigravity?.install) active.push('antigravity');
+    if (cfg.opencode?.install) active.push('opencode');
     if (cfg.docker?.install) active.push('docker');
     if (cfg.node?.install) active.push('node');
     if (cfg.python?.install) active.push('python');
@@ -253,7 +268,7 @@ function App() {
   const resetConfig = () => {
     if (window.confirm("Voulez-vous vraiment réinitialiser la plaque de Lego ?")) {
       setConfig(DEFAULT_CONFIG);
-      setActiveTools(['system', 'git']);
+      setActiveTools(['system', 'git', 'antigravity', 'agy', 'opencode']);
       setActiveModalTool(null);
     }
   };
@@ -684,6 +699,82 @@ function App() {
                         </div>
                       </>
                     )}
+                  </div>
+                )}
+
+                {activeModalTool === 'checklist' && (
+                  <div className="lego-form-fields">
+                    <div className="brick-info-note">
+                      <Info size={14} />
+                      <span>Ces tâches s'afficheront à la fin de l'exécution du script d'installation sous forme de liste manuelle à cocher.</span>
+                    </div>
+                    
+                    <label className="lego-field-label" style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
+                      Étapes manuelles post-installation :
+                    </label>
+                    
+                    <div className="todo-items-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                      {config.checklist.tasks.map((task, idx) => (
+                        <div key={idx} className="todo-item-input-row" style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            value={task}
+                            onChange={e => {
+                              const updated = [...config.checklist.tasks];
+                              updated[idx] = e.target.value;
+                              updateSubConfig('checklist', { tasks: updated });
+                            }}
+                            placeholder="Ex: Tâche"
+                            className="todo-input"
+                            style={{ flexGrow: 1, padding: '8px', border: '2px solid var(--border-color)', borderRadius: '6px' }}
+                          />
+                          <button
+                            onClick={() => {
+                              const updated = config.checklist.tasks.filter((_, i) => i !== idx);
+                              updateSubConfig('checklist', { tasks: updated });
+                            }}
+                            className="btn-todo-delete"
+                            title="Supprimer la tâche"
+                            style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer', background: '#fee2e2', color: '#ef4444' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        const updated = [...config.checklist.tasks, ''];
+                        updateSubConfig('checklist', { tasks: updated });
+                      }}
+                      className="btn-add-todo-item"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', border: '2px solid var(--border-color)', borderRadius: '6px', background: '#f0fdf4', color: '#16a34a', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                      <Plus size={14} />
+                      <span>Ajouter une étape</span>
+                    </button>
+                  </div>
+                )}
+
+                {activeModalTool === 'antigravity' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>Le framework Google Antigravity sera installé via son script d'installation officiel.</span>
+                  </div>
+                )}
+
+                {activeModalTool === 'agy' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>Le CLI <code>agy</code> sera téléchargé et installé à partir du site officiel d'Antigravity.</span>
+                  </div>
+                )}
+
+                {activeModalTool === 'opencode' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>L'assistant autonome OpenCode sera installé depuis les dépôts officiels.</span>
                   </div>
                 )}
 

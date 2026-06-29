@@ -87,6 +87,23 @@ export interface NginxOptions {
   port: number;
 }
 
+export interface ChecklistOptions {
+  install: boolean;
+  tasks: string[];
+}
+
+export interface AgyOptions {
+  install: boolean;
+}
+
+export interface AntigravityOptions {
+  install: boolean;
+}
+
+export interface OpencodeOptions {
+  install: boolean;
+}
+
 export interface SetupConfig {
   os: OSTarget;
   system: BaseSystemOptions;
@@ -105,6 +122,10 @@ export interface SetupConfig {
   postgres: PostgreSQLOptions;
   mongodb: MongoDBOptions;
   nginx: NginxOptions;
+  checklist: ChecklistOptions;
+  agy: AgyOptions;
+  antigravity: AntigravityOptions;
+  opencode: OpencodeOptions;
 }
 
 export interface ToolMetadata {
@@ -143,6 +164,34 @@ export const TOOLS_METADATA: ToolMetadata[] = [
     description: 'Installe Zsh, Oh My Zsh et des thèmes/plugins populaires.',
     category: 'system',
     icon: 'Cpu'
+  },
+  {
+    id: 'checklist',
+    name: 'Liste de tâches',
+    description: 'Affiche un rappel des tâches manuelles à la fin du script.',
+    category: 'system',
+    icon: 'ListTodo'
+  },
+  {
+    id: 'antigravity',
+    name: 'Antigravity',
+    description: 'Installe le framework d\'agents d\'intelligence artificielle Google Antigravity.',
+    category: 'system',
+    icon: 'Flame'
+  },
+  {
+    id: 'agy',
+    name: 'agy CLI',
+    description: 'Installe l\'interface en ligne de commande agy pour piloter Antigravity.',
+    category: 'languages',
+    icon: 'Terminal'
+  },
+  {
+    id: 'opencode',
+    name: 'OpenCode',
+    description: 'Installe l\'assistant de développement autonome OpenCode.',
+    category: 'editors',
+    icon: 'Code'
   },
   {
     id: 'docker',
@@ -302,5 +351,21 @@ export const DEFAULT_CONFIG: SetupConfig = {
     install: false,
     configurePort: false,
     port: 80
+  },
+  checklist: {
+    install: false,
+    tasks: [
+      'Se connecter à GitHub via gh auth login',
+      'Configurer les clés SSH'
+    ]
+  },
+  agy: {
+    install: false
+  },
+  antigravity: {
+    install: false
+  },
+  opencode: {
+    install: false
   }
 };

@@ -16,7 +16,11 @@ import {
   terraformTemplate,
   postgresTemplate,
   mongodbTemplate,
-  nginxTemplate
+  nginxTemplate,
+  checklistTemplate,
+  agyTemplate,
+  antigravityTemplate,
+  opencodeTemplate
 } from './templates/tools.js';
 
 export * from './types.js';
@@ -44,7 +48,11 @@ export function generateSetupScript(config: SetupConfig, order?: string[]): stri
     terraform: () => config.terraform ? terraformTemplate(config.terraform) : '',
     postgres: () => config.postgres ? postgresTemplate(config.postgres) : '',
     mongodb: () => config.mongodb ? mongodbTemplate(config.mongodb) : '',
-    nginx: () => config.nginx ? nginxTemplate(config.nginx) : ''
+    nginx: () => config.nginx ? nginxTemplate(config.nginx) : '',
+    checklist: () => config.checklist ? checklistTemplate(config.checklist) : '',
+    agy: () => config.agy ? agyTemplate(config.agy) : '',
+    antigravity: () => config.antigravity ? antigravityTemplate(config.antigravity) : '',
+    opencode: () => config.opencode ? opencodeTemplate(config.opencode) : ''
   };
 
   // Execution order: custom or default
@@ -64,7 +72,11 @@ export function generateSetupScript(config: SetupConfig, order?: string[]): stri
     'terraform',
     'postgres',
     'mongodb',
-    'nginx'
+    'nginx',
+    'checklist',
+    'agy',
+    'antigravity',
+    'opencode'
   ];
 
   for (const key of executionOrder) {
