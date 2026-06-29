@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   generateSetupScript,
   DEFAULT_CONFIG,
@@ -21,33 +21,70 @@ import {
   Upload,
   RefreshCw,
   Info,
-  Settings,
-  Flame
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  Flame,
+  Plus
 } from 'lucide-react';
+
+// Map of Lego-themed styling classes and meta information for each tool
+interface ToolMeta {
+  id: string;
+  name: string;
+  desc: string;
+  icon: any;
+  colorClass: string; // Used for LEGO brick theme colors
+}
+
+const TOOLS_META: ToolMeta[] = [
+  { id: 'system', name: 'Système', desc: 'Mises à jour et dépendances de base', icon: Terminal, colorClass: 'lego-red' },
+  { id: 'git', name: 'Git', desc: 'Configuration identité et init de dépôts', icon: GitBranch, colorClass: 'lego-orange' },
+  { id: 'zsh', name: 'Zsh & Shell', desc: 'Installe Zsh, Oh My Zsh et thèmes', icon: Cpu, colorClass: 'lego-yellow' },
+  { id: 'docker', name: 'Docker', desc: 'Moteur Docker et Docker Compose', icon: Container, colorClass: 'lego-blue' },
+  { id: 'node', name: 'Node.js', desc: 'Versions Node via NVM/FNM et pkgs', icon: Code, colorClass: 'lego-green' },
+  { id: 'python', name: 'Python', desc: 'Python 3, Poetry et gestionnaire Pyenv', icon: Binary, colorClass: 'lego-indigo' },
+  { id: 'go', name: 'Go', desc: 'Langage Go et configuration de GOPATH', icon: FileCode, colorClass: 'lego-teal' },
+  { id: 'rust', name: 'Rust', desc: 'Chaîne d\'outils Rust via rustup', icon: Package, colorClass: 'lego-rust' },
+  { id: 'vscode', name: 'VS Code', desc: 'Éditeur VS Code et extensions', icon: Layers, colorClass: 'lego-vscode' },
+  { id: 'neovim', name: 'Neovim', desc: 'Installe Neovim et kickstart.nvim', icon: Edit3, colorClass: 'lego-emerald' }
+];
 
 function App() {
   const [config, setConfig] = useState<SetupConfig>(DEFAULT_CONFIG);
+  const [activeTools, setActiveTools] = useState<string[]>(['system', 'git']);
+  const [expandedTools, setExpandedTools] = useState<Record<string, boolean>>({ system: true });
   const [script, setScript] = useState<string>('');
   const [copied, setCopied] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>('system');
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Generate script whenever config changes
+  // Helper to extract active tools list based on config values (useful when importing JSON)
+  const getActiveToolsFromConfig = (cfg: SetupConfig): string[] => {
+    const active: string[] = [];
+    if (cfg.system) active.push('system');
+    if (cfg.git?.configure) active.push('git');
+    if (cfg.zsh?.install) active.push('zsh');
+    if (cfg.docker?.install) active.push('docker');
+    if (cfg.node?.install) active.push('node');
+    if (cfg.python?.install) active.push('python');
+    if (cfg.go?.install) active.push('go');
+    if (cfg.rust?.install) active.push('rust');
+    if (cfg.vscode?.install) active.push('vscode');
+    if (cfg.neovim?.install) active.push('neovim');
+    return active;
+  };
+
+  // Generate script in real-time when config or blocks order changes
   useEffect(() => {
     try {
-      const generated = generateSetupScript(config);
+      const generated = generateSetupScript(config, activeTools);
       setScript(generated);
     } catch (err) {
       console.error("Error generating script:", err);
     }
-  }, [config]);
-
-  const updateConfig = <K extends keyof SetupConfig>(key: K, value: SetupConfig[K]) => {
-    setConfig(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
+  }, [config, activeTools]);
 
   const updateSubConfig = <K extends keyof Omit<SetupConfig, 'os'>>(
     section: K,
@@ -59,6 +96,93 @@ function App() {
         ...prev[section],
         ...updates
       } as SetupConfig[K]
+    }));
+  };
+
+  // HTML5 Drag and Drop events
+  const handleDragStart = (e: React.DragEvent, data: any) => {
+    e.dataTransfer.setData("text/plain", JSON.stringify(data));
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+    try {
+      const rawData = e.dataTransfer.getData("text/plain");
+      if (!rawData) return;
+      const data = JSON.parse(rawData);
+
+      if (data.action === 'add') {
+        const toolId = data.toolId;
+        if (activeTools.includes(toolId)) return;
+
+        // Insert new tool at drop point
+        const newActive = [...activeTools];
+        newActive.splice(targetIndex, 0, toolId);
+        setActiveTools(newActive);
+
+        // Turn on in config
+        if (toolId === 'git') {
+          updateSubConfig('git', { configure: true });
+        } else {
+          updateSubConfig(toolId as any, { install: true });
+        }
+        
+        // Expand the newly dropped tool by default
+        setExpandedTools(prev => ({ ...prev, [toolId]: true }));
+
+      } else if (data.action === 'reorder') {
+        const sourceIndex = data.index;
+        if (sourceIndex === targetIndex || sourceIndex === targetIndex - 1) return;
+
+        const newActive = [...activeTools];
+        const [removed] = newActive.splice(sourceIndex, 1);
+        
+        // Adjust targetIndex if it shifts after removal
+        const adjustedTarget = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+        newActive.splice(adjustedTarget, 0, removed);
+        
+        setActiveTools(newActive);
+      }
+    } catch (err) {
+      console.error("Drop error:", err);
+    }
+  };
+
+  const handleAddToolDirectly = (toolId: string) => {
+    if (activeTools.includes(toolId)) return;
+    setActiveTools(prev => [...prev, toolId]);
+    if (toolId === 'git') {
+      updateSubConfig('git', { configure: true });
+    } else {
+      updateSubConfig(toolId as any, { install: true });
+    }
+    setExpandedTools(prev => ({ ...prev, [toolId]: true }));
+  };
+
+  const handleRemoveTool = (toolId: string) => {
+    setActiveTools(prev => prev.filter(t => t !== toolId));
+    if (toolId === 'git') {
+      updateSubConfig('git', { configure: false });
+    } else {
+      updateSubConfig(toolId as any, { install: false });
+    }
+  };
+
+  const toggleExpand = (toolId: string) => {
+    setExpandedTools(prev => ({
+      ...prev,
+      [toolId]: !prev[toolId]
     }));
   };
 
@@ -103,9 +227,12 @@ function App() {
         if (parsed && typeof parsed === 'object') {
           const merged = { ...DEFAULT_CONFIG, ...parsed } as SetupConfig;
           setConfig(merged);
+          // Set activeTools in order defined by config presence
+          const active = getActiveToolsFromConfig(merged);
+          setActiveTools(active);
         }
       } catch (err) {
-        alert("Erreur lors de la lecture du fichier de configuration : JSON invalide.");
+        alert("Erreur lors de la lecture du fichier : JSON invalide.");
       }
     };
     reader.readAsText(file);
@@ -113,8 +240,10 @@ function App() {
   };
 
   const resetConfig = () => {
-    if (window.confirm("Voulez-vous vraiment réinitialiser la configuration ?")) {
+    if (window.confirm("Voulez-vous vraiment réinitialiser la plaque de Lego ?")) {
       setConfig(DEFAULT_CONFIG);
+      setActiveTools(['system', 'git']);
+      setExpandedTools({ system: true });
     }
   };
 
@@ -126,72 +255,103 @@ function App() {
     updateSubConfig('zsh', { plugins: updated });
   };
 
-  const handleGlobalPackagesChange = (value: string) => {
-    const pkgs = value.split(',').map(p => p.trim()).filter(Boolean);
-    updateSubConfig('node', { globalPackages: pkgs });
+  const handleGlobalPackagesChange = (val: string) => {
+    const packages = val.split(',').map(p => p.trim()).filter(Boolean);
+    updateSubConfig('node', { globalPackages: packages });
   };
 
-  const handleExtensionsChange = (value: string) => {
-    const exts = value.split(',').map(e => e.trim()).filter(Boolean);
-    updateSubConfig('vscode', { extensions: exts });
+  const handleExtensionsChange = (val: string) => {
+    const extensions = val.split(',').map(e => e.trim()).filter(Boolean);
+    updateSubConfig('vscode', { extensions });
   };
-
-  const sections = [
-    { id: 'system', name: 'Système', icon: Terminal },
-    { id: 'git', name: 'Git', icon: GitBranch },
-    { id: 'zsh', name: 'Zsh & Oh My Zsh', icon: Cpu },
-    { id: 'docker', name: 'Docker', icon: Container },
-    { id: 'node', name: 'Node.js', icon: Code },
-    { id: 'python', name: 'Python', icon: Binary },
-    { id: 'go', name: 'Go', icon: FileCode },
-    { id: 'rust', name: 'Rust', icon: Package },
-    { id: 'vscode', name: 'VS Code', icon: Layers },
-    { id: 'neovim', name: 'Neovim', icon: Edit3 },
-  ];
 
   return (
-    <div className="app-container">
-      {/* Sidebar navigation */}
+    <div className="app-container lego-light-theme">
+      {/* Left Sidebar: Lego Box (Palette of tools) */}
       <aside className="sidebar">
         <div className="logo-section">
           <Flame className="logo-icon" />
-          <h2>SetupGen</h2>
+          <h2>LegoSetup</h2>
         </div>
-        <nav className="nav-menu">
-          {sections.map(s => {
-            const Icon = s.icon;
-            return (
-              <button
-                key={s.id}
-                onClick={() => setActiveSection(s.id)}
-                className={`nav-item ${activeSection === s.id ? 'active' : ''}`}
-              >
-                <Icon className="nav-icon" size={18} />
-                <span>{s.name}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <div className="sidebar-desc">
+          <p>Faites glisser les briques de Lego ci-dessous sur la plaque pour construire votre script.</p>
+        </div>
+        <div className="lego-box-container">
+          <div className="lego-box-title">Boîte à Legos</div>
+          <div className="lego-bricks-palette">
+            {TOOLS_META.map(tool => {
+              const Icon = tool.icon;
+              const isActive = activeTools.includes(tool.id);
+              return (
+                <div
+                  key={tool.id}
+                  draggable={!isActive}
+                  onDragStart={(e) => handleDragStart(e, { action: 'add', toolId: tool.id })}
+                  className={`lego-palette-brick ${tool.colorClass} ${isActive ? 'used' : ''}`}
+                  title={isActive ? "Déjà sur la plaque de construction" : "Glisser sur la plaque"}
+                >
+                  <div className="brick-studs-indicator">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <div className="brick-inner">
+                    <Icon size={16} className="brick-icon" />
+                    <div className="brick-info">
+                      <div className="brick-name">{tool.name}</div>
+                      <div className="brick-desc">{tool.desc}</div>
+                    </div>
+                    {!isActive && (
+                      <button 
+                        onClick={() => handleAddToolDirectly(tool.id)} 
+                        className="btn-add-brick"
+                        title="Ajouter à la fin"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         <div className="sidebar-footer">
           <p>© 2026 Alexis-mk</p>
         </div>
       </aside>
 
-      {/* Main editor split area */}
+      {/* Main interactive grid area */}
       <main className="main-content">
         <header className="top-header">
           <div className="header-title-section">
-            <h1>Configurateur d'Environnement</h1>
-            <p>Personnalisez vos outils et générez votre script d'installation Bash en un clic.</p>
+            <h1>Constructeur de Script</h1>
+            <p>Assemblez votre script d'installation comme des briques de Lego, ajustez l'ordre et exportez.</p>
           </div>
           <div className="header-actions">
-            <button onClick={handleExportJSON} className="btn-secondary" title="Exporter en JSON">
-              <Download size={16} />
-              <span>Exporter JSON</span>
+            <div className="os-toggle-container">
+              <span>OS Cible:</span>
+              <div className="os-pills">
+                <button
+                  onClick={() => setConfig(prev => ({ ...prev, os: 'ubuntu' }))}
+                  className={`os-pill ${config.os === 'ubuntu' ? 'active' : ''}`}
+                >
+                  Ubuntu
+                </button>
+                <button
+                  onClick={() => setConfig(prev => ({ ...prev, os: 'debian' }))}
+                  className={`os-pill ${config.os === 'debian' ? 'active' : ''}`}
+                >
+                  Debian
+                </button>
+              </div>
+            </div>
+            
+            <button onClick={handleExportJSON} className="btn-secondary" title="Exporter la configuration">
+              <Download size={15} />
+              <span>Exporter</span>
             </button>
-            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" title="Importer un JSON">
-              <Upload size={16} />
-              <span>Importer JSON</span>
+            <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" title="Importer une configuration">
+              <Upload size={15} />
+              <span>Importer</span>
             </button>
             <input
               type="file"
@@ -200,592 +360,376 @@ function App() {
               accept=".json"
               style={{ display: 'none' }}
             />
-            <button onClick={resetConfig} className="btn-danger" title="Réinitialiser">
-              <RefreshCw size={16} />
-              <span>Réinitialiser</span>
+            <button onClick={resetConfig} className="btn-danger" title="Vider la plaque">
+              <RefreshCw size={15} />
+              <span>Vider</span>
             </button>
           </div>
         </header>
 
         <div className="editor-grid">
-          {/* Left panel: Config form */}
-          <section className="form-panel">
-            {/* Target OS Selector */}
-            <div className="form-card os-card">
-              <div className="card-header">
-                <Settings size={20} className="card-icon" />
-                <h3>Distribution Target</h3>
-              </div>
-              <div className="os-selector-group">
-                <button
-                  type="button"
-                  className={`os-btn ${config.os === 'ubuntu' ? 'active' : ''}`}
-                  onClick={() => updateConfig('os', 'ubuntu')}
-                >
-                  Ubuntu
-                </button>
-                <button
-                  type="button"
-                  className={`os-btn ${config.os === 'debian' ? 'active' : ''}`}
-                  onClick={() => updateConfig('os', 'debian')}
-                >
-                  Debian
-                </button>
-              </div>
+          {/* Middle: Drag-and-drop lego baseplate workspace */}
+          <section className="workspace-panel">
+            <div className="baseplate-header">
+              <div className="stud-pattern-bg"></div>
+              <h3>Plaque de Construction</h3>
+              <span>Ordre d'exécution de haut en bas</span>
             </div>
+            
+            <div className="lego-baseplate">
+              {/* Top drop zone */}
+              <div
+                onDragOver={(e) => handleDragOver(e, 0)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, 0)}
+                className={`lego-drop-zone ${dragOverIndex === 0 ? 'active' : ''}`}
+              >
+                <div className="drop-indicator"></div>
+              </div>
 
-            {/* Dynamic Card rendering based on active sidebar tab */}
-            <div className="form-card">
-              {activeSection === 'system' && (
-                <div className="section-form">
-                  <div className="card-header">
-                    <Terminal size={20} className="card-icon" />
-                    <h3>Options Système de Base</h3>
-                  </div>
-                  <p className="card-desc">Gérez les mises à jour logicielles de base et les paquets essentiels.</p>
-                  
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Mise à jour des listes de paquets</label>
-                      <span>Exécute <code>apt-get update</code> pour synchroniser les dépôts.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.system.updatePackages}
-                        onChange={e => updateSubConfig('system', { updatePackages: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Mise à niveau des paquets existants</label>
-                      <span>Exécute <code>apt-get upgrade -y</code> (peut prendre plus de temps).</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.system.upgradePackages}
-                        onChange={e => updateSubConfig('system', { upgradePackages: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Installer les essentiels de compilation</label>
-                      <span>Installe <code>build-essential, curl, wget, git, unzip, ca-certificates</code>.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.system.installEssentials}
-                        onChange={e => updateSubConfig('system', { installEssentials: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
+              {activeTools.length === 0 ? (
+                <div className="empty-baseplate-msg">
+                  <div className="lego-placeholder-brick"></div>
+                  <h4>La plaque est vide !</h4>
+                  <p>Glissez-déposez des blocs depuis la Boîte à Legos de gauche pour commencer à assembler votre script.</p>
                 </div>
-              )}
+              ) : (
+                activeTools.map((toolId, index) => {
+                  const toolMeta = TOOLS_META.find(t => t.id === toolId);
+                  if (!toolMeta) return null;
+                  const Icon = toolMeta.icon;
+                  const isExpanded = !!expandedTools[toolId];
 
-              {activeSection === 'git' && (
-                <div className="section-form">
-                  <div className="card-header">
-                    <GitBranch size={20} className="card-icon" />
-                    <h3>Configuration de Git</h3>
-                  </div>
-                  <p className="card-desc">Configurez votre identité Git globale.</p>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Configurer Git globalement</label>
-                      <span>Active l'écriture des options Git ci-dessous.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.git.configure}
-                        onChange={e => updateSubConfig('git', { configure: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {config.git.configure && (
-                    <div className="sub-fields-container animate-fade">
-                      <div className="form-field">
-                        <label>Nom d'utilisateur global (user.name)</label>
-                        <input
-                          type="text"
-                          value={config.git.userName || ''}
-                          onChange={e => updateSubConfig('git', { userName: e.target.value })}
-                          placeholder="Jean Dupont"
-                        />
-                      </div>
-                      <div className="form-field">
-                        <label>Email global (user.email)</label>
-                        <input
-                          type="email"
-                          value={config.git.userEmail || ''}
-                          onChange={e => updateSubConfig('git', { userEmail: e.target.value })}
-                          placeholder="jean.dupont@example.com"
-                        />
-                      </div>
-                      <div className="form-field">
-                        <label>Branche par défaut à l'initialisation</label>
-                        <input
-                          type="text"
-                          value={config.git.defaultBranch || 'main'}
-                          onChange={e => updateSubConfig('git', { defaultBranch: e.target.value })}
-                          placeholder="main"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeSection === 'zsh' && (
-                <div className="section-form">
-                  <div className="card-header">
-                    <Cpu size={20} className="card-icon" />
-                    <h3>Zsh & Oh My Zsh</h3>
-                  </div>
-                  <p className="card-desc">Configurez un terminal moderne avec Zsh, Oh My Zsh et ses thèmes.</p>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Installer Zsh</label>
-                      <span>Installe le shell et le définit comme shell par défaut.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.zsh.install}
-                        onChange={e => updateSubConfig('zsh', { install: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {config.zsh.install && (
-                    <div className="sub-fields-container animate-fade">
-                      <div className="form-group-switch">
-                        <div className="switch-info">
-                          <label>Installer Oh My Zsh</label>
-                          <span>Installe Oh My Zsh de manière non interactive.</span>
+                  return (
+                    <React.Fragment key={toolId}>
+                      {/* Active lego block */}
+                      <div
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, { action: 'reorder', index })}
+                        className={`lego-brick-active ${toolMeta.colorClass} ${isExpanded ? 'expanded' : 'collapsed'}`}
+                      >
+                        {/* Lego studs on top of the brick */}
+                        <div className="brick-studs">
+                          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
                         </div>
-                        <label className="switch">
-                          <input
-                            type="checkbox"
-                            checked={config.zsh.installOhMyZsh}
-                            onChange={e => updateSubConfig('zsh', { installOhMyZsh: e.target.checked })}
-                          />
-                          <span className="slider"></span>
-                        </label>
-                      </div>
 
-                      {config.zsh.installOhMyZsh && (
-                        <>
-                          <div className="form-field">
-                            <label>Thème Oh My Zsh</label>
-                            <select
-                              value={config.zsh.theme}
-                              onChange={e => updateSubConfig('zsh', { theme: e.target.value as any })}
+                        <div className="brick-header">
+                          <div className="brick-drag-handle" title="Glisser pour réordonner">
+                            <span className="drag-dots">⋮⋮</span>
+                          </div>
+                          
+                          <div className="brick-title-area" onClick={() => toggleExpand(toolId)}>
+                            <Icon size={18} className="brick-icon" />
+                            <h4>{toolMeta.name}</h4>
+                            <span className="brick-order-badge">#{index + 1}</span>
+                          </div>
+
+                          <div className="brick-actions">
+                            <button
+                              onClick={() => toggleExpand(toolId)}
+                              className="btn-brick-action"
+                              title={isExpanded ? "Replier" : "Déplier"}
                             >
-                              <option value="robbyrussell">robbyrussell (défaut)</option>
-                              <option value="agnoster">agnoster</option>
-                              <option value="powerlevel10k">powerlevel10k</option>
-                            </select>
+                              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            </button>
+                            <button
+                              onClick={() => handleRemoveTool(toolId)}
+                              className="btn-brick-delete"
+                              title="Retirer de la plaque"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </div>
+                        </div>
 
-                          <div className="form-field">
-                            <label>Plugins Oh My Zsh</label>
-                            <div className="checkbox-list">
-                              <label className="checkbox-item">
-                                <input
-                                  type="checkbox"
-                                  checked={config.zsh.plugins.includes('git')}
-                                  onChange={() => toggleZshPlugin('git')}
-                                />
-                                <span>git</span>
-                              </label>
-                              <label className="checkbox-item">
-                                <input
-                                  type="checkbox"
-                                  checked={config.zsh.plugins.includes('zsh-autosuggestions')}
-                                  onChange={() => toggleZshPlugin('zsh-autosuggestions')}
-                                />
-                                <span>zsh-autosuggestions (Autocomplétion)</span>
-                              </label>
-                              <label className="checkbox-item">
-                                <input
-                                  type="checkbox"
-                                  checked={config.zsh.plugins.includes('zsh-syntax-highlighting')}
-                                  onChange={() => toggleZshPlugin('zsh-syntax-highlighting')}
-                                />
-                                <span>zsh-syntax-highlighting (Coloration syntaxique)</span>
-                              </label>
-                            </div>
+                        {/* Expanded configuration content inside the Lego brick */}
+                        {isExpanded && (
+                          <div className="brick-body animate-fade">
+                            {toolId === 'system' && (
+                              <div className="lego-form-grid">
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.system.updatePackages}
+                                    onChange={e => updateSubConfig('system', { updatePackages: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Mettre à jour apt (<code>apt-get update</code>)</span>
+                                </label>
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.system.upgradePackages}
+                                    onChange={e => updateSubConfig('system', { upgradePackages: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Mettre à niveau les paquets installés (<code>apt-get upgrade</code>)</span>
+                                </label>
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.system.installEssentials}
+                                    onChange={e => updateSubConfig('system', { installEssentials: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Installer dépendances essentielles (curl, git, build-essential)</span>
+                                </label>
+                              </div>
+                            )}
+
+                            {toolId === 'git' && (
+                              <div className="lego-form-fields">
+                                <div className="lego-field">
+                                  <label>Nom d'utilisateur global (user.name)</label>
+                                  <input
+                                    type="text"
+                                    value={config.git.userName || ''}
+                                    onChange={e => updateSubConfig('git', { userName: e.target.value })}
+                                    placeholder="Alexis"
+                                  />
+                                </div>
+                                <div className="lego-field">
+                                  <label>Email global (user.email)</label>
+                                  <input
+                                    type="email"
+                                    value={config.git.userEmail || ''}
+                                    onChange={e => updateSubConfig('git', { userEmail: e.target.value })}
+                                    placeholder="alexis@example.com"
+                                  />
+                                </div>
+                                <div className="lego-field">
+                                  <label>Branche par défaut</label>
+                                  <input
+                                    type="text"
+                                    value={config.git.defaultBranch || 'main'}
+                                    onChange={e => updateSubConfig('git', { defaultBranch: e.target.value })}
+                                    placeholder="main"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {toolId === 'zsh' && (
+                              <div className="lego-form-fields">
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.zsh.installOhMyZsh}
+                                    onChange={e => updateSubConfig('zsh', { installOhMyZsh: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Installer Oh My Zsh (non-interactif)</span>
+                                </label>
+                                
+                                {config.zsh.installOhMyZsh && (
+                                  <>
+                                    <div className="lego-field">
+                                      <label>Thème Oh My Zsh</label>
+                                      <select
+                                        value={config.zsh.theme}
+                                        onChange={e => updateSubConfig('zsh', { theme: e.target.value as any })}
+                                      >
+                                        <option value="robbyrussell">robbyrussell (par défaut)</option>
+                                        <option value="agnoster">agnoster</option>
+                                        <option value="powerlevel10k">powerlevel10k</option>
+                                      </select>
+                                    </div>
+                                    <div className="lego-field">
+                                      <label>Plugins Oh My Zsh</label>
+                                      <div className="lego-checkbox-group">
+                                        <label className="lego-checkbox">
+                                          <input
+                                            type="checkbox"
+                                            checked={config.zsh.plugins.includes('git')}
+                                            onChange={() => toggleZshPlugin('git')}
+                                          />
+                                          <span className="checkmark"></span>
+                                          <span>git</span>
+                                        </label>
+                                        <label className="lego-checkbox">
+                                          <input
+                                            type="checkbox"
+                                            checked={config.zsh.plugins.includes('zsh-autosuggestions')}
+                                            onChange={() => toggleZshPlugin('zsh-autosuggestions')}
+                                          />
+                                          <span className="checkmark"></span>
+                                          <span>zsh-autosuggestions</span>
+                                        </label>
+                                        <label className="lego-checkbox">
+                                          <input
+                                            type="checkbox"
+                                            checked={config.zsh.plugins.includes('zsh-syntax-highlighting')}
+                                            onChange={() => toggleZshPlugin('zsh-syntax-highlighting')}
+                                          />
+                                          <span className="checkmark"></span>
+                                          <span>zsh-syntax-highlighting</span>
+                                        </label>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
+
+                            {toolId === 'docker' && (
+                              <div className="lego-form-grid">
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.docker.installCompose}
+                                    onChange={e => updateSubConfig('docker', { installCompose: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Installer Docker Compose</span>
+                                </label>
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.docker.addToGroup}
+                                    onChange={e => updateSubConfig('docker', { addToGroup: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Ajouter l'utilisateur au groupe Docker (sans sudo)</span>
+                                </label>
+                              </div>
+                            )}
+
+                            {toolId === 'node' && (
+                              <div className="lego-form-fields">
+                                <div className="lego-field">
+                                  <label>Gestionnaire de version</label>
+                                  <select
+                                    value={config.node.manager}
+                                    onChange={e => updateSubConfig('node', { manager: e.target.value as any })}
+                                  >
+                                    <option value="nvm">NVM (Node Version Manager)</option>
+                                    <option value="fnm">FNM (Fast Node Manager)</option>
+                                  </select>
+                                </div>
+                                <div className="lego-field">
+                                  <label>Version de Node.js</label>
+                                  <input
+                                    type="text"
+                                    value={config.node.version}
+                                    onChange={e => updateSubConfig('node', { version: e.target.value })}
+                                    placeholder="lts, latest, 20, 22"
+                                  />
+                                </div>
+                                <div className="lego-field">
+                                  <label>Modules globaux NPM (séparés par virgules)</label>
+                                  <input
+                                    type="text"
+                                    value={config.node.globalPackages.join(', ')}
+                                    onChange={e => handleGlobalPackagesChange(e.target.value)}
+                                    placeholder="yarn, pnpm, pm2"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {toolId === 'python' && (
+                              <div className="lego-form-fields">
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.python.installPoetry}
+                                    onChange={e => updateSubConfig('python', { installPoetry: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Installer Poetry (Gestionnaire de dépendances)</span>
+                                </label>
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.python.installPyenv}
+                                    onChange={e => updateSubConfig('python', { installPyenv: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Installer Pyenv (Gestion de versions de Python)</span>
+                                </label>
+                              </div>
+                            )}
+
+                            {toolId === 'go' && (
+                              <div className="lego-form-fields">
+                                <div className="lego-field">
+                                  <label>Version de Go</label>
+                                  <input
+                                    type="text"
+                                    value={config.go.version}
+                                    onChange={e => updateSubConfig('go', { version: e.target.value })}
+                                    placeholder="1.22.0"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {toolId === 'rust' && (
+                              <div className="brick-info-note">
+                                <Info size={14} />
+                                <span>Rust sera installé via l'installateur officiel <code>rustup</code>.</span>
+                              </div>
+                            )}
+
+                            {toolId === 'vscode' && (
+                              <div className="lego-form-fields">
+                                <div className="lego-field">
+                                  <label>Extensions recommandées (ID séparés par virgules)</label>
+                                  <input
+                                    type="text"
+                                    value={config.vscode.extensions.join(', ')}
+                                    onChange={e => handleExtensionsChange(e.target.value)}
+                                    placeholder="dbaeumer.vscode-eslint, esbenp.prettier-vscode"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {toolId === 'neovim' && (
+                              <div className="lego-form-fields">
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.neovim.installKickstart}
+                                    onChange={e => updateSubConfig('neovim', { installKickstart: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Cloner la configuration Kickstart.nvim</span>
+                                </label>
+                              </div>
+                            )}
                           </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeSection === 'docker' && (
-                <div className="section-form">
-                  <div className="card-header">
-                    <Container size={20} className="card-icon" />
-                    <h3>Docker & Compose</h3>
-                  </div>
-                  <p className="card-desc">Conteneurisez vos applications avec le moteur Docker officiel.</p>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Installer Docker</label>
-                      <span>Télécharge et configure Docker Engine depuis les dépôts officiels.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.docker.install}
-                        onChange={e => updateSubConfig('docker', { install: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {config.docker.install && (
-                    <div className="sub-fields-container animate-fade">
-                      <div className="form-group-switch">
-                        <div className="switch-info">
-                          <label>Installer Docker Compose</label>
-                          <span>Installe l'extension de composition de conteneurs.</span>
-                        </div>
-                        <label className="switch">
-                          <input
-                            type="checkbox"
-                            checked={config.docker.installCompose}
-                            onChange={e => updateSubConfig('docker', { installCompose: e.target.checked })}
-                          />
-                          <span className="slider"></span>
-                        </label>
+                        )}
                       </div>
 
-                      <div className="form-group-switch">
-                        <div className="switch-info">
-                          <label>Ajouter l'utilisateur au groupe docker</label>
-                          <span>Permet de lancer les commandes Docker sans utiliser <code>sudo</code>.</span>
-                        </div>
-                        <label className="switch">
-                          <input
-                            type="checkbox"
-                            checked={config.docker.addToGroup}
-                            onChange={e => updateSubConfig('docker', { addToGroup: e.target.checked })}
-                          />
-                          <span className="slider"></span>
-                        </label>
+                      {/* Drop zone below current block */}
+                      <div
+                        onDragOver={(e) => handleDragOver(e, index + 1)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, index + 1)}
+                        className={`lego-drop-zone ${dragOverIndex === index + 1 ? 'active' : ''}`}
+                      >
+                        <div className="drop-indicator"></div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeSection === 'node' && (
-                <div className="section-form">
-                  <div className="card-header">
-                    <Code size={20} className="card-icon" />
-                    <h3>Node.js & JS Tooling</h3>
-                  </div>
-                  <p className="card-desc">Installez Node.js de manière isolée et sécurisée.</p>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Installer Node.js</label>
-                      <span>Active l'installation d'un gestionnaire de version Node.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.node.install}
-                        onChange={e => updateSubConfig('node', { install: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {config.node.install && (
-                    <div className="sub-fields-container animate-fade">
-                      <div className="form-field">
-                        <label>Gestionnaire de version</label>
-                        <select
-                          value={config.node.manager}
-                          onChange={e => updateSubConfig('node', { manager: e.target.value as any })}
-                        >
-                          <option value="nvm">NVM (Node Version Manager - Classique)</option>
-                          <option value="fnm">FNM (Fast Node Manager - Écrit en Rust, rapide)</option>
-                        </select>
-                      </div>
-
-                      <div className="form-field">
-                        <label>Version de Node.js</label>
-                        <input
-                          type="text"
-                          value={config.node.version}
-                          onChange={e => updateSubConfig('node', { version: e.target.value })}
-                          placeholder="lts, latest, 20, 22..."
-                        />
-                        <span className="field-tip">Utilisez <code>lts</code> ou <code>latest</code>, ou un numéro majeur comme <code>20</code>.</span>
-                      </div>
-
-                      <div className="form-field">
-                        <label>Dépendances globales NPM (séparées par une virgule)</label>
-                        <input
-                          type="text"
-                          value={config.node.globalPackages.join(', ')}
-                          onChange={e => handleGlobalPackagesChange(e.target.value)}
-                          placeholder="yarn, pnpm, pm2..."
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeSection === 'python' && (
-                <div className="section-form">
-                  <div className="card-header">
-                    <Binary size={20} className="card-icon" />
-                    <h3>Python & Packaging</h3>
-                  </div>
-                  <p className="card-desc">Installez Python 3 et configurez les outils modernes pour vos projets.</p>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Installer Python 3</label>
-                      <span>Installe Python 3, Pip et l'utilitaire d'environnements virtuels.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.python.install}
-                        onChange={e => updateSubConfig('python', { install: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {config.python.install && (
-                    <div className="sub-fields-container animate-fade">
-                      <div className="form-group-switch">
-                        <div className="switch-info">
-                          <label>Installer Poetry</label>
-                          <span>Installe le gestionnaire de dépendances et d'empaquetage de référence.</span>
-                        </div>
-                        <label className="switch">
-                          <input
-                            type="checkbox"
-                            checked={config.python.installPoetry}
-                            onChange={e => updateSubConfig('python', { installPoetry: e.target.checked })}
-                          />
-                          <span className="slider"></span>
-                        </label>
-                      </div>
-
-                      <div className="form-group-switch">
-                        <div className="switch-info">
-                          <label>Installer Pyenv</label>
-                          <span>Outil de gestion de versions Python multiples.</span>
-                        </div>
-                        <label className="switch">
-                          <input
-                            type="checkbox"
-                            checked={config.python.installPyenv}
-                            onChange={e => updateSubConfig('python', { installPyenv: e.target.checked })}
-                          />
-                          <span className="slider"></span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeSection === 'go' && (
-                <div className="section-form">
-                  <div className="card-header">
-                    <FileCode size={20} className="card-icon" />
-                    <h3>Langage Go (Golang)</h3>
-                  </div>
-                  <p className="card-desc">Installez le compilateur Go officiel et configurez votre GOPATH.</p>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Installer Go</label>
-                      <span>Télécharge et installe Go en configurant les variables d'environnement dans <code>~/.bashrc</code>.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.go.install}
-                        onChange={e => updateSubConfig('go', { install: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {config.go.install && (
-                    <div className="sub-fields-container animate-fade">
-                      <div className="form-field">
-                        <label>Version de Go</label>
-                        <input
-                          type="text"
-                          value={config.go.version}
-                          onChange={e => updateSubConfig('go', { version: e.target.value })}
-                          placeholder="1.22.0"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeSection === 'rust' && (
-                <div className="section-form">
-                  <div className="card-header">
-                    <Package size={20} className="card-icon" />
-                    <h3>Langage Rust</h3>
-                  </div>
-                  <p className="card-desc">Installez le compilateur Rust et le gestionnaire de paquets Cargo.</p>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Installer Rust via rustup</label>
-                      <span>Installe <code>rustup</code>, configurant <code>rustc</code>, <code>cargo</code> et les outils standards.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.rust.install}
-                        onChange={e => updateSubConfig('rust', { install: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {activeSection === 'vscode' && (
-                <div className="section-form">
-                  <div className="card-header">
-                    <Layers size={20} className="card-icon" />
-                    <h3>Visual Studio Code</h3>
-                  </div>
-                  <p className="card-desc">Installez VS Code stable avec vos extensions préférées.</p>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Installer VS Code</label>
-                      <span>Installe le package Debian officiel.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.vscode.install}
-                        onChange={e => updateSubConfig('vscode', { install: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {config.vscode.install && (
-                    <div className="sub-fields-container animate-fade">
-                      <div className="form-field">
-                        <label>Extensions VS Code (ID séparés par une virgule)</label>
-                        <input
-                          type="text"
-                          value={config.vscode.extensions.join(', ')}
-                          onChange={e => handleExtensionsChange(e.target.value)}
-                          placeholder="dbaeumer.vscode-eslint, esbenp.prettier-vscode..."
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeSection === 'neovim' && (
-                <div className="section-form">
-                  <div className="card-header">
-                    <Edit3 size={20} className="card-icon" />
-                    <h3>Neovim</h3>
-                  </div>
-                  <p className="card-desc">Installez Neovim depuis le PPA unstable et chargez une configuration propre.</p>
-
-                  <div className="form-group-switch">
-                    <div className="switch-info">
-                      <label>Installer Neovim</label>
-                      <span>Installe la version unstable la plus récente de Neovim via PPA.</span>
-                    </div>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={config.neovim.install}
-                        onChange={e => updateSubConfig('neovim', { install: e.target.checked })}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-
-                  {config.neovim.install && (
-                    <div className="sub-fields-container animate-fade">
-                      <div className="form-group-switch">
-                        <div className="switch-info">
-                          <label>Installer Kickstart.nvim</label>
-                          <span>Clone la configuration populaire Kickstart pour débuter facilement.</span>
-                        </div>
-                        <label className="switch">
-                          <input
-                            type="checkbox"
-                            checked={config.neovim.installKickstart}
-                            onChange={e => updateSubConfig('neovim', { installKickstart: e.target.checked })}
-                          />
-                          <span className="slider"></span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                    </React.Fragment>
+                  );
+                })
               )}
             </div>
 
-            {/* Quick manual script execution card */}
-            <div className="form-card info-card">
-              <div className="card-header">
-                <Info size={18} className="card-icon" />
-                <h3>Comment exécuter le script ?</h3>
-              </div>
-              <ol className="execution-steps">
-                <li>Téléchargez le script en cliquant sur <strong>Télécharger</strong>.</li>
-                <li>Ouvrez votre terminal et naviguez vers le dossier de téléchargement.</li>
-                <li>Rendez le script exécutable : <br /><code>chmod +x setup.sh</code></li>
-                <li>Lancez l'installation : <br /><code>./setup.sh</code></li>
-              </ol>
+            {/* Drag guide */}
+            <div className="baseplate-guide">
+              <Info size={16} />
+              <span>Pour changer l'ordre d'installation, attrapez le bouton de déplacement (handle) d'une brique et glissez-la vers le haut ou vers le bas.</span>
             </div>
           </section>
 
-          {/* Right panel: Realtime script preview */}
+          {/* Right: Live code preview panel */}
           <section className="preview-panel">
             <div className="preview-header">
               <div className="preview-title-container">
                 <div className="indicator"></div>
-                <h3>Script Généré Live</h3>
+                <h3>Script d'Installation</h3>
               </div>
               <div className="preview-actions">
                 <button
@@ -793,7 +737,7 @@ function App() {
                   className={`btn-action ${copied ? 'success' : ''}`}
                   title="Copier le script"
                 >
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
                   <span>{copied ? 'Copié !' : 'Copier'}</span>
                 </button>
                 <button
@@ -801,7 +745,7 @@ function App() {
                   className="btn-action primary"
                   title="Télécharger setup.sh"
                 >
-                  <Download size={16} />
+                  <Download size={14} />
                   <span>Télécharger</span>
                 </button>
               </div>
@@ -811,7 +755,7 @@ function App() {
                 className="code-textarea"
                 readOnly
                 value={script}
-                placeholder="# Le script d'installation généré apparaîtra ici..."
+                placeholder="# Assemblez des blocs Lego pour générer le script..."
               />
             </div>
           </section>
