@@ -25,7 +25,13 @@ import {
   ChevronDown,
   ChevronUp,
   Flame,
-  Plus
+  Plus,
+  Search,
+  GitPullRequest,
+  Database,
+  Globe,
+  Anchor,
+  Grid
 } from 'lucide-react';
 
 // Map of Lego-themed styling classes and meta information for each tool
@@ -40,6 +46,7 @@ interface ToolMeta {
 const TOOLS_META: ToolMeta[] = [
   { id: 'system', name: 'Système', desc: 'Mises à jour et dépendances de base', icon: Terminal, colorClass: 'lego-red' },
   { id: 'git', name: 'Git', desc: 'Configuration identité et init de dépôts', icon: GitBranch, colorClass: 'lego-orange' },
+  { id: 'ghcli', name: 'GitHub CLI', desc: 'Outil de ligne de commande GitHub (gh)', icon: GitPullRequest, colorClass: 'lego-orange' },
   { id: 'zsh', name: 'Zsh & Shell', desc: 'Installe Zsh, Oh My Zsh et thèmes', icon: Cpu, colorClass: 'lego-yellow' },
   { id: 'docker', name: 'Docker', desc: 'Moteur Docker et Docker Compose', icon: Container, colorClass: 'lego-blue' },
   { id: 'node', name: 'Node.js', desc: 'Versions Node via NVM/FNM et pkgs', icon: Code, colorClass: 'lego-green' },
@@ -47,7 +54,12 @@ const TOOLS_META: ToolMeta[] = [
   { id: 'go', name: 'Go', desc: 'Langage Go et configuration de GOPATH', icon: FileCode, colorClass: 'lego-teal' },
   { id: 'rust', name: 'Rust', desc: 'Chaîne d\'outils Rust via rustup', icon: Package, colorClass: 'lego-rust' },
   { id: 'vscode', name: 'VS Code', desc: 'Éditeur VS Code et extensions', icon: Layers, colorClass: 'lego-vscode' },
-  { id: 'neovim', name: 'Neovim', desc: 'Installe Neovim et kickstart.nvim', icon: Edit3, colorClass: 'lego-emerald' }
+  { id: 'neovim', name: 'Neovim', desc: 'Installe Neovim et kickstart.nvim', icon: Edit3, colorClass: 'lego-emerald' },
+  { id: 'kubectl', name: 'Kubectl', desc: 'Gestion de clusters Kubernetes', icon: Anchor, colorClass: 'lego-blue' },
+  { id: 'terraform', name: 'Terraform', desc: 'Infrastructure as Code par HashiCorp', icon: Grid, colorClass: 'lego-rust' },
+  { id: 'postgres', name: 'PostgreSQL', desc: 'Serveur de base relationnelle SQL', icon: Database, colorClass: 'lego-indigo' },
+  { id: 'mongodb', name: 'MongoDB', desc: 'Base de données NoSQL orientée doc', icon: Database, colorClass: 'lego-green' },
+  { id: 'nginx', name: 'Nginx', desc: 'Serveur HTTP et reverse proxy', icon: Globe, colorClass: 'lego-emerald' }
 ];
 
 function App() {
@@ -57,6 +69,7 @@ function App() {
   const [script, setScript] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,6 +78,7 @@ function App() {
     const active: string[] = [];
     if (cfg.system) active.push('system');
     if (cfg.git?.configure) active.push('git');
+    if (cfg.ghcli?.install) active.push('ghcli');
     if (cfg.zsh?.install) active.push('zsh');
     if (cfg.docker?.install) active.push('docker');
     if (cfg.node?.install) active.push('node');
@@ -73,6 +87,11 @@ function App() {
     if (cfg.rust?.install) active.push('rust');
     if (cfg.vscode?.install) active.push('vscode');
     if (cfg.neovim?.install) active.push('neovim');
+    if (cfg.kubectl?.install) active.push('kubectl');
+    if (cfg.terraform?.install) active.push('terraform');
+    if (cfg.postgres?.install) active.push('postgres');
+    if (cfg.mongodb?.install) active.push('mongodb');
+    if (cfg.nginx?.install) active.push('nginx');
     return active;
   };
 
@@ -265,6 +284,12 @@ function App() {
     updateSubConfig('vscode', { extensions });
   };
 
+  // Filter tools based on search term
+  const filteredTools = TOOLS_META.filter(tool =>
+    tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tool.desc.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="app-container lego-light-theme">
       {/* Left Sidebar: Lego Box (Palette of tools) */}
@@ -273,13 +298,25 @@ function App() {
           <Flame className="logo-icon" />
           <h2>LegoSetup</h2>
         </div>
-        <div className="sidebar-desc">
-          <p>Faites glisser les briques de Lego ci-dessous sur la plaque pour construire votre script.</p>
+        
+        {/* Search bar inside the Lego palette box */}
+        <div className="search-bar-container">
+          <div className="search-input-wrapper">
+            <Search className="search-icon" size={15} />
+            <input
+              type="text"
+              placeholder="Rechercher un outil..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="lego-search-input"
+            />
+          </div>
         </div>
+
         <div className="lego-box-container">
           <div className="lego-box-title">Boîte à Legos</div>
           <div className="lego-bricks-palette">
-            {TOOLS_META.map(tool => {
+            {filteredTools.map(tool => {
               const Icon = tool.icon;
               const isActive = activeTools.includes(tool.id);
               return (
@@ -312,6 +349,11 @@ function App() {
                 </div>
               );
             })}
+            {filteredTools.length === 0 && (
+              <div className="no-search-results">
+                Aucun bloc ne correspond.
+              </div>
+            )}
           </div>
         </div>
         <div className="sidebar-footer">
@@ -509,6 +551,13 @@ function App() {
                               </div>
                             )}
 
+                            {toolId === 'ghcli' && (
+                              <div className="brick-info-note">
+                                <Info size={14} />
+                                <span>GitHub CLI sera installé depuis les dépôts officiels de GitHub.</span>
+                              </div>
+                            )}
+
                             {toolId === 'zsh' && (
                               <div className="lego-form-fields">
                                 <label className="lego-checkbox">
@@ -696,6 +745,88 @@ function App() {
                                   <span className="checkmark"></span>
                                   <span>Cloner la configuration Kickstart.nvim</span>
                                 </label>
+                              </div>
+                            )}
+
+                            {toolId === 'kubectl' && (
+                              <div className="brick-info-note">
+                                <Info size={14} />
+                                <span>Kubectl sera installé en téléchargeant le binaire stable officiel de Kubernetes.</span>
+                              </div>
+                            )}
+
+                            {toolId === 'terraform' && (
+                              <div className="brick-info-note">
+                                <Info size={14} />
+                                <span>Terraform sera installé à partir du dépôt de packages HashiCorp.</span>
+                              </div>
+                            )}
+
+                            {toolId === 'postgres' && (
+                              <div className="lego-form-fields">
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.postgres.createUserAndDb}
+                                    onChange={e => updateSubConfig('postgres', { createUserAndDb: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Créer un utilisateur et sa base de données associés</span>
+                                </label>
+                                {config.postgres.createUserAndDb && (
+                                  <>
+                                    <div className="lego-field">
+                                      <label>Nom d'utilisateur Postgres</label>
+                                      <input
+                                        type="text"
+                                        value={config.postgres.dbUser || ''}
+                                        onChange={e => updateSubConfig('postgres', { dbUser: e.target.value })}
+                                        placeholder="mon_utilisateur"
+                                      />
+                                    </div>
+                                    <div className="lego-field">
+                                      <label>Nom de la base de données</label>
+                                      <input
+                                        type="text"
+                                        value={config.postgres.dbName || ''}
+                                        onChange={e => updateSubConfig('postgres', { dbName: e.target.value })}
+                                        placeholder="ma_base"
+                                      />
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
+
+                            {toolId === 'mongodb' && (
+                              <div className="brick-info-note">
+                                <Info size={14} />
+                                <span>MongoDB Community Server sera installé à partir des dépôts officiels de MongoDB.</span>
+                              </div>
+                            )}
+
+                            {toolId === 'nginx' && (
+                              <div className="lego-form-fields">
+                                <label className="lego-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.nginx.configurePort}
+                                    onChange={e => updateSubConfig('nginx', { configurePort: e.target.checked })}
+                                  />
+                                  <span className="checkmark"></span>
+                                  <span>Changer le port par défaut (actuellement 80)</span>
+                                </label>
+                                {config.nginx.configurePort && (
+                                  <div className="lego-field">
+                                    <label>Port d'écoute Nginx</label>
+                                    <input
+                                      type="number"
+                                      value={config.nginx.port || 80}
+                                      onChange={e => updateSubConfig('nginx', { port: parseInt(e.target.value) || 80 })}
+                                      placeholder="8080"
+                                    />
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

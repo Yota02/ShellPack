@@ -58,6 +58,35 @@ export interface NeovimOptions {
   installKickstart: boolean; // Clones kickstart.nvim
 }
 
+export interface GHCLIOptions {
+  install: boolean;
+}
+
+export interface KubectlOptions {
+  install: boolean;
+}
+
+export interface TerraformOptions {
+  install: boolean;
+}
+
+export interface PostgreSQLOptions {
+  install: boolean;
+  createUserAndDb: boolean;
+  dbUser?: string;
+  dbName?: string;
+}
+
+export interface MongoDBOptions {
+  install: boolean;
+}
+
+export interface NginxOptions {
+  install: boolean;
+  configurePort: boolean;
+  port: number;
+}
+
 export interface SetupConfig {
   os: OSTarget;
   system: BaseSystemOptions;
@@ -70,6 +99,12 @@ export interface SetupConfig {
   rust: RustOptions;
   vscode: VSCodeOptions;
   neovim: NeovimOptions;
+  ghcli: GHCLIOptions;
+  kubectl: KubectlOptions;
+  terraform: TerraformOptions;
+  postgres: PostgreSQLOptions;
+  mongodb: MongoDBOptions;
+  nginx: NginxOptions;
 }
 
 export interface ToolMetadata {
@@ -94,6 +129,13 @@ export const TOOLS_METADATA: ToolMetadata[] = [
     description: 'Configuration globale de Git (nom, email, branche par défaut).',
     category: 'system',
     icon: 'GitBranch'
+  },
+  {
+    id: 'ghcli',
+    name: 'GitHub CLI',
+    description: 'Installe l\'outil en ligne de commande officiel GitHub (gh).',
+    category: 'system',
+    icon: 'GitPullRequest'
   },
   {
     id: 'zsh',
@@ -150,6 +192,41 @@ export const TOOLS_METADATA: ToolMetadata[] = [
     description: 'Installe Neovim et configure optionnellement kickstart.nvim pour un éditeur prêt à l\'emploi.',
     category: 'editors',
     icon: 'Edit3'
+  },
+  {
+    id: 'kubectl',
+    name: 'Kubectl',
+    description: 'Outil de ligne de commande Kubernetes pour piloter les clusters.',
+    category: 'devops',
+    icon: 'Anchor'
+  },
+  {
+    id: 'terraform',
+    name: 'Terraform',
+    description: 'Outil d\'Infrastructure as Code par HashiCorp.',
+    category: 'devops',
+    icon: 'Grid'
+  },
+  {
+    id: 'postgres',
+    name: 'PostgreSQL',
+    description: 'Installe le serveur de base de données relationnelle PostgreSQL.',
+    category: 'devops',
+    icon: 'Database'
+  },
+  {
+    id: 'mongodb',
+    name: 'MongoDB',
+    description: 'Installe le serveur de base de données NoSQL orientée documents MongoDB.',
+    category: 'devops',
+    icon: 'Database'
+  },
+  {
+    id: 'nginx',
+    name: 'Nginx',
+    description: 'Installe le serveur web et proxy inverse Nginx.',
+    category: 'devops',
+    icon: 'Globe'
   }
 ];
 
@@ -202,5 +279,28 @@ export const DEFAULT_CONFIG: SetupConfig = {
   neovim: {
     install: false,
     installKickstart: true
+  },
+  ghcli: {
+    install: false
+  },
+  kubectl: {
+    install: false
+  },
+  terraform: {
+    install: false
+  },
+  postgres: {
+    install: false,
+    createUserAndDb: false,
+    dbUser: '',
+    dbName: ''
+  },
+  mongodb: {
+    install: false
+  },
+  nginx: {
+    install: false,
+    configurePort: false,
+    port: 80
   }
 };

@@ -274,3 +274,111 @@ export const neovimTemplate = (config: SetupConfig['neovim']): string => {
   script += `log_success "Neovim configuré avec succès !"\n`;
   return script;
 };
+
+export const ghcliTemplate = (config: SetupConfig['ghcli']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de GitHub CLI ---\n`;
+  script += `if ! has_command gh; then\n`;
+  script += `    log_info "Configuration du dépôt officiel de GitHub CLI..."\n`;
+  script += `    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg\n`;
+  script += `    sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg\n`;
+  script += `    echo "deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null\n`;
+  script += `    sudo apt update\n`;
+  script += `    log_info "Installation de gh..."\n`;
+  script += `    sudo apt install gh -y\n`;
+  script += `else\n`;
+  script += `    log_info "GitHub CLI est déjà installé."\n`;
+  script += `fi\n`;
+  script += `log_success "GitHub CLI configuré avec succès !"\n`;
+  return script;
+};
+
+export const kubectlTemplate = (config: SetupConfig['kubectl']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de Kubectl ---\n`;
+  script += `if ! has_command kubectl; then\n`;
+  script += `    log_info "Téléchargement de Kubectl stable..."\n`;
+  script += `    curl -LO "https://dl.k8s.io/release/\$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"\n`;
+  script += `    log_info "Installation de kubectl..."\n`;
+  script += `    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl\n`;
+  script += `    rm kubectl\n`;
+  script += `else\n`;
+  script += `    log_info "Kubectl est déjà installé."\n`;
+  script += `fi\n`;
+  script += `log_success "Kubectl configuré avec succès !"\n`;
+  return script;
+};
+
+export const terraformTemplate = (config: SetupConfig['terraform']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de Terraform ---\n`;
+  script += `if ! has_command terraform; then\n`;
+  script += `    log_info "Configuration du dépôt HashiCorp..."\n`;
+  script += `    wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg\n`;
+  script += `    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com \$(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list\n`;
+  script += `    sudo apt update\n`;
+  script += `    log_info "Installation de Terraform..."\n`;
+  script += `    sudo apt-get install terraform -y\n`;
+  script += `else\n`;
+  script += `    log_info "Terraform est déjà installé."\n`;
+  script += `fi\n`;
+  script += `log_success "Terraform configuré avec succès !"\n`;
+  return script;
+};
+
+export const postgresTemplate = (config: SetupConfig['postgres']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de PostgreSQL ---\n`;
+  script += `if ! has_command psql; then\n`;
+  script += `    log_info "Installation de PostgreSQL et contribs..."\n`;
+  script += `    sudo apt-get install -y postgresql postgresql-contrib\n`;
+  script += `    sudo systemctl enable --now postgresql\n`;
+  script += `else\n`;
+  script += `    log_info "PostgreSQL est déjà installé."\n`;
+  script += `fi\n`;
+  if (config.createUserAndDb && config.dbUser) {
+    const dbName = config.dbName || config.dbUser;
+    script += `log_info "Création de l'utilisateur Postgres '${config.dbUser}' et DB '${dbName}'..."\n`;
+    script += `sudo -u postgres psql -c "CREATE USER ${config.dbUser} WITH PASSWORD 'password';" 2>/dev/null || true\n`;
+    script += `sudo -u postgres psql -c "CREATE DATABASE ${dbName} OWNER ${config.dbUser};" 2>/dev/null || true\n`;
+  }
+  script += `log_success "PostgreSQL configuré avec succès !"\n`;
+  return script;
+};
+
+export const mongodbTemplate = (config: SetupConfig['mongodb']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de MongoDB ---\n`;
+  script += `if ! has_command mongod; then\n`;
+  script += `    log_info "Configuration du dépôt MongoDB officiel..."\n`;
+  script += `    curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg\n`;
+  script += `    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu \$(lsb_release -cs)/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list\n`;
+  script += `    sudo apt update\n`;
+  script += `    log_info "Installation de MongoDB Community Server..."\n`;
+  script += `    sudo apt-get install -y mongodb-org\n`;
+  script += `    sudo systemctl enable --now mongod\n`;
+  script += `else\n`;
+  script += `    log_info "MongoDB est déjà installé."\n`;
+  script += `fi\n`;
+  script += `log_success "MongoDB configuré avec succès !"\n`;
+  return script;
+};
+
+export const nginxTemplate = (config: SetupConfig['nginx']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de Nginx ---\n`;
+  script += `if ! has_command nginx; then\n`;
+  script += `    log_info "Installation de Nginx..."\n`;
+  script += `    sudo apt-get install -y nginx\n`;
+  script += `    sudo systemctl enable --now nginx\n`;
+  script += `else\n`;
+  script += `    log_info "Nginx est déjà installé."\n`;
+  script += `fi\n`;
+  if (config.configurePort && config.port) {
+    script += `log_info "Configuration du port Nginx vers ${config.port}..."\n`;
+    script += `sudo sed -i 's/listen 80 default_server;/listen ${config.port} default_server;/g' /etc/nginx/sites-available/default 2>/dev/null || true\n`;
+    script += `sudo systemctl restart nginx\n`;
+  }
+  script += `log_success "Nginx configuré avec succès !"\n`;
+  return script;
+};

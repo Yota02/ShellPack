@@ -10,7 +10,13 @@ import {
   goTemplate,
   rustTemplate,
   vscodeTemplate,
-  neovimTemplate
+  neovimTemplate,
+  ghcliTemplate,
+  kubectlTemplate,
+  terraformTemplate,
+  postgresTemplate,
+  mongodbTemplate,
+  nginxTemplate
 } from './templates/tools.js';
 
 export * from './types.js';
@@ -32,13 +38,20 @@ export function generateSetupScript(config: SetupConfig, order?: string[]): stri
     go: () => config.go ? goTemplate(config.go) : '',
     rust: () => config.rust ? rustTemplate(config.rust) : '',
     vscode: () => config.vscode ? vscodeTemplate(config.vscode) : '',
-    neovim: () => config.neovim ? neovimTemplate(config.neovim) : ''
+    neovim: () => config.neovim ? neovimTemplate(config.neovim) : '',
+    ghcli: () => config.ghcli ? ghcliTemplate(config.ghcli) : '',
+    kubectl: () => config.kubectl ? kubectlTemplate(config.kubectl) : '',
+    terraform: () => config.terraform ? terraformTemplate(config.terraform) : '',
+    postgres: () => config.postgres ? postgresTemplate(config.postgres) : '',
+    mongodb: () => config.mongodb ? mongodbTemplate(config.mongodb) : '',
+    nginx: () => config.nginx ? nginxTemplate(config.nginx) : ''
   };
 
   // Execution order: custom or default
   const executionOrder = order || [
     'system',
     'git',
+    'ghcli',
     'zsh',
     'docker',
     'node',
@@ -46,7 +59,12 @@ export function generateSetupScript(config: SetupConfig, order?: string[]): stri
     'go',
     'rust',
     'vscode',
-    'neovim'
+    'neovim',
+    'kubectl',
+    'terraform',
+    'postgres',
+    'mongodb',
+    'nginx'
   ];
 
   for (const key of executionOrder) {
