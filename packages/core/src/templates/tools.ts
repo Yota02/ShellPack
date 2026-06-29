@@ -398,8 +398,13 @@ export const agyTemplate = (config: SetupConfig['agy']): string => {
   if (!config.install) return '';
   let script = `\n# --- Installation de agy CLI ---\n`;
   script += `if ! has_command agy; then\n`;
-  script += `    log_info "Téléchargement et installation de agy CLI..."\n`;
-  script += `    curl -fsSL https://antigravity.google/install-agy.sh | bash\n`;
+  if (config.installMethod === 'npm') {
+    script += `    log_info "Installation de agy CLI via NPM..."\n`;
+    script += `    npm install -g agy\n`;
+  } else {
+    script += `    log_info "Téléchargement et installation de agy CLI via curl..."\n`;
+    script += `    curl -fsSL https://antigravity.google/cli/install.sh | bash\n`;
+  }
   script += `else\n`;
   script += `    log_info "agy CLI est déjà installé."\n`;
   script += `fi\n`;
@@ -410,12 +415,46 @@ export const agyTemplate = (config: SetupConfig['agy']): string => {
 export const antigravityTemplate = (config: SetupConfig['antigravity']): string => {
   if (!config.install) return '';
   let script = `\n# --- Installation de Google Antigravity ---\n`;
-  script += `if ! has_command antigravity; then\n`;
-  script += `    log_info "Téléchargement et installation de Google Antigravity..."\n`;
-  script += `    curl -fsSL https://antigravity.google/install.sh | bash\n`;
-  script += `else\n`;
-  script += `    log_info "Google Antigravity est déjà installé."\n`;
-  script += `fi\n`;
+  
+  if (config.installMethod === 'npm') {
+    script += `if ! has_command antigravity; then\n`;
+    script += `    log_info "Installation de Google Antigravity via NPM..."\n`;
+    script += `    npm install -g antigravity\n`;
+    script += `else\n`;
+    script += `    log_info "Google Antigravity est déjà installé."\n`;
+    script += `fi\n`;
+    
+    if (config.installIDE) {
+      script += `\n# Installation de l'IDE Antigravity (version modifiée de VS Code)\n`;
+      script += `if ! has_command "antigravity-ide"; then\n`;
+      script += `    log_info "Téléchargement et installation de Antigravity IDE..."\n`;
+      script += `    INSTALLER_URL="https://opensnap.github.io/antigravity/install.sh"\n`;
+      script += `    curl -fsSL "$INSTALLER_URL" | sudo -E env ANTIGRAVITY_LINUX_INSTALLER_URL="$INSTALLER_URL" bash -s -- --ide\n`;
+      script += `else\n`;
+      script += `    log_info "Antigravity IDE est déjà installé."\n`;
+      script += `fi\n`;
+    }
+  } else {
+    // Curl installation method using community installer wrapper for Linux
+    if (config.installIDE) {
+      script += `if ! has_command antigravity || ! has_command antigravity-ide; then\n`;
+      script += `    log_info "Téléchargement et installation de Google Antigravity (App & IDE) via curl..."\n`;
+      script += `    INSTALLER_URL="https://opensnap.github.io/antigravity/install.sh"\n`;
+      script += `    curl -fsSL "$INSTALLER_URL" | sudo -E env ANTIGRAVITY_LINUX_INSTALLER_URL="$INSTALLER_URL" bash -s -- --all\n`;
+      script += `else\n`;
+      script += `    log_info "Google Antigravity App et IDE sont déjà installés."\n`;
+      script += `fi\n`;
+    } else {
+      script += `if ! has_command antigravity; then\n`;
+      script += `    log_info "Téléchargement et installation de Google Antigravity App via curl..."\n`;
+      script += `    INSTALLER_URL="https://opensnap.github.io/antigravity/install.sh"\n`;
+      script += `    curl -fsSL "$INSTALLER_URL" | sudo -E env ANTIGRAVITY_LINUX_INSTALLER_URL="$INSTALLER_URL" bash -s --\n`;
+      script += `else\n`;
+      script += `    log_info "Google Antigravity App est déjà installé."\n`;
+      script += `fi\n`;
+    }
+  }
+
   script += `log_success "Google Antigravity installé avec succès !"\n`;
   return script;
 };
@@ -424,11 +463,64 @@ export const opencodeTemplate = (config: SetupConfig['opencode']): string => {
   if (!config.install) return '';
   let script = `\n# --- Installation de OpenCode ---\n`;
   script += `if ! has_command opencode; then\n`;
-  script += `    log_info "Téléchargement et installation de OpenCode..."\n`;
-  script += `    curl -fsSL https://opencode.dev/install.sh | bash\n`;
+  if (config.installMethod === 'npm') {
+    script += `    log_info "Installation de OpenCode via NPM..."\n`;
+    script += `    npm install -g opencode-ai\n`;
+  } else {
+    script += `    log_info "Téléchargement et installation de OpenCode via curl..."\n`;
+    script += `    curl -fsSL https://opencode.ai/install | bash\n`;
+  }
   script += `else\n`;
   script += `    log_info "OpenCode est déjà installé."\n`;
   script += `fi\n`;
   script += `log_success "OpenCode installé avec succès !"\n`;
+  return script;
+};
+
+export const chromeTemplate = (config: SetupConfig['chrome']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de Google Chrome ---\n`;
+  script += `if ! has_command google-chrome; then\n`;
+  script += `    log_info "Téléchargement et installation de Google Chrome..."\n`;
+  script += `    wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb\n`;
+  script += `    sudo apt-get install -y ./google-chrome-stable_current_amd64.deb\n`;
+  script += `    rm google-chrome-stable_current_amd64.deb\n`;
+  script += `else\n`;
+  script += `    log_info "Google Chrome est déjà installé."\n`;
+  script += `fi\n`;
+  script += `log_success "Google Chrome installé avec succès !"\n`;
+  return script;
+};
+
+export const firefoxTemplate = (config: SetupConfig['firefox']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de Firefox ---\n`;
+  script += `if ! has_command firefox; then\n`;
+  script += `    log_info "Installation de Firefox via apt..."\n`;
+  script += `    sudo apt-get install -y firefox\n`;
+  script += `else\n`;
+  script += `    log_info "Firefox est déjà installé."\n`;
+  script += `fi\n`;
+  script += `log_success "Firefox installé avec succès !"\n`;
+  return script;
+};
+
+export const slackTemplate = (config: SetupConfig['slack']): string => {
+  if (!config.install) return '';
+  let script = `\n# --- Installation de Slack ---\n`;
+  script += `if ! has_command slack; then\n`;
+  script += `    if has_command snap; then\n`;
+  script += `        log_info "Installation de Slack via snap..."\n`;
+  script += `        sudo snap install slack --classic\n`;
+  script += `    else\n`;
+  script += `        log_info "Téléchargement et installation de Slack via .deb..."\n`;
+  script += `        wget -q https://downloads.slack-edge.com/desktop-releases/linux/x64/4.38.125/slack-desktop-4.38.125-amd64.deb\n`;
+  script += `        sudo apt-get install -y ./slack-desktop-4.38.125-amd64.deb\n`;
+  script += `        rm slack-desktop-4.38.125-amd64.deb\n`;
+  script += `    fi\n`;
+  script += `else\n`;
+  script += `    log_info "Slack est déjà installé."\n`;
+  script += `fi\n`;
+  script += `log_success "Slack installé avec succès !"\n`;
   return script;
 };

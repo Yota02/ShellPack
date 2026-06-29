@@ -94,14 +94,18 @@ export interface ChecklistOptions {
 
 export interface AgyOptions {
   install: boolean;
+  installMethod?: 'curl' | 'npm';
 }
 
 export interface AntigravityOptions {
   install: boolean;
+  installMethod?: 'curl' | 'npm';
+  installIDE?: boolean;
 }
 
 export interface OpencodeOptions {
   install: boolean;
+  installMethod?: 'curl' | 'npm';
 }
 
 export interface BunOptions {
@@ -163,6 +167,18 @@ export interface TmuxOptions {
   install: boolean;
 }
 
+export interface ChromeOptions {
+  install: boolean;
+}
+
+export interface FirefoxOptions {
+  install: boolean;
+}
+
+export interface SlackOptions {
+  install: boolean;
+}
+
 export interface SetupConfig {
   os: OSTarget;
   system: BaseSystemOptions;
@@ -199,6 +215,9 @@ export interface SetupConfig {
   sqlite: SQLiteOptions;
   lazygit: LazygitOptions;
   tmux: TmuxOptions;
+  chrome: ChromeOptions;
+  firefox: FirefoxOptions;
+  slack: SlackOptions;
 }
 
 export interface ToolMetadata {
@@ -447,6 +466,27 @@ export const TOOLS_METADATA: ToolMetadata[] = [
     description: 'Installe le multiplexeur de terminaux Tmux pour gérer plusieurs sessions.',
     category: 'system',
     icon: 'Terminal'
+  },
+  {
+    id: 'chrome',
+    name: 'Google Chrome',
+    description: 'Installe le navigateur web Google Chrome (via le paquet officiel .deb).',
+    category: 'system',
+    icon: 'Chrome'
+  },
+  {
+    id: 'firefox',
+    name: 'Firefox',
+    description: 'Installe le navigateur web Firefox (via apt).',
+    category: 'system',
+    icon: 'Globe'
+  },
+  {
+    id: 'slack',
+    name: 'Slack',
+    description: 'Installe l\'application de messagerie Slack (via snap ou deb).',
+    category: 'system',
+    icon: 'Slack'
   }
 ];
 
@@ -570,18 +610,31 @@ export const DEFAULT_CONFIG: SetupConfig = {
     ]
   },
   agy: {
-    install: false
+    install: false,
+    installMethod: 'curl'
   },
   antigravity: {
-    install: false
+    install: false,
+    installMethod: 'curl',
+    installIDE: false
   },
   opencode: {
-    install: false
+    install: false,
+    installMethod: 'curl'
   },
   lazygit: {
     install: false
   },
   tmux: {
+    install: false
+  },
+  chrome: {
+    install: false
+  },
+  firefox: {
+    install: false
+  },
+  slack: {
     install: false
   }
 };

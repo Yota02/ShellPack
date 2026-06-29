@@ -29,9 +29,14 @@ import {
   GitPullRequest,
   Database,
   Globe,
+  Chrome,
+  Slack,
   Anchor,
   Grid,
-  ListTodo
+  ListTodo,
+  AlertTriangle,
+  CheckCircle,
+  ArrowUpDown
 } from 'lucide-react';
 
 // Map of Lego-themed styling classes and meta information for each tool
@@ -77,8 +82,210 @@ const TOOLS_META: ToolMeta[] = [
   { id: 'mongodb', name: 'MongoDB', desc: 'Base de données NoSQL orientée doc', icon: Database, colorClass: 'lego-green' },
   { id: 'redis', name: 'Redis', desc: 'Magasin de données en cache Redis', icon: Database, colorClass: 'lego-indigo' },
   { id: 'sqlite', name: 'SQLite', desc: 'Moteur de base de données SQL léger embarqué', icon: Database, colorClass: 'lego-indigo' },
-  { id: 'nginx', name: 'Nginx', desc: 'Serveur HTTP et reverse proxy', icon: Globe, colorClass: 'lego-emerald' }
+  { id: 'nginx', name: 'Nginx', desc: 'Serveur HTTP et reverse proxy', icon: Globe, colorClass: 'lego-emerald' },
+  { id: 'chrome', name: 'Google Chrome', desc: 'Navigateur web Google Chrome officiel', icon: Chrome, colorClass: 'lego-blue' },
+  { id: 'firefox', name: 'Firefox', desc: 'Navigateur web Firefox via apt', icon: Globe, colorClass: 'lego-orange' },
+  { id: 'slack', name: 'Slack', desc: 'Client de messagerie Slack officiel', icon: Slack, colorClass: 'lego-red' }
 ];
+
+const TOOL_DEPENDENCIES: Record<string, string[]> = {
+  git: ['system'],
+  ghcli: ['system'],
+  lazygit: ['system'],
+  zsh: ['system'],
+  tmux: ['system'],
+  docker: ['system'],
+  node: ['system'],
+  bun: ['system'],
+  deno: ['system'],
+  python: ['system'],
+  go: ['system'],
+  rust: ['system'],
+  php: ['system'],
+  ruby: ['system'],
+  java: ['system'],
+  vscode: ['system'],
+  neovim: ['system'],
+  kubectl: ['system'],
+  terraform: ['system'],
+  helm: ['system'],
+  minikube: ['system', 'docker'],
+  awscli: ['system'],
+  gcloud: ['system'],
+  ansible: ['system'],
+  postgres: ['system'],
+  mongodb: ['system'],
+  redis: ['system'],
+  sqlite: ['system'],
+  nginx: ['system'],
+  chrome: ['system'],
+  firefox: ['system'],
+  slack: ['system'],
+  antigravity: ['system'],
+  agy: ['system', 'antigravity'],
+  opencode: ['system'],
+};
+
+interface DependencyIssue {
+  toolId: string;
+  dependentOnId: string;
+  message: string;
+  type: 'missing' | 'wrong_order';
+}
+
+function getDependenciesForTool(toolId: string, config: SetupConfig): string[] {
+  const deps = [...(TOOL_DEPENDENCIES[toolId] || [])];
+  
+  // If the tool is installed via npm, it also requires node.js
+  if (
+    (toolId === 'opencode' && config.opencode?.installMethod === 'npm') ||
+    (toolId === 'agy' && config.agy?.installMethod === 'npm') ||
+    (toolId === 'antigravity' && config.antigravity?.installMethod === 'npm')
+  ) {
+    if (!deps.includes('node')) {
+      deps.push('node');
+    }
+  }
+  
+  return deps;
+}
+
+function validateInstallationOrder(activeTools: string[], config: SetupConfig): DependencyIssue[] {
+  const issues: DependencyIssue[] = [];
+
+  // Check if system is not first
+  const systemIndex = activeTools.indexOf('system');
+  if (systemIndex > 0) {
+    issues.push({
+      toolId: 'system',
+      dependentOnId: '',
+      message: "Le 'Système de base' doit être configuré/installé en premier.",
+      type: 'wrong_order'
+    });
+  }
+
+  // Check if checklist is not last
+  const checklistIndex = activeTools.indexOf('checklist');
+  if (checklistIndex !== -1 && checklistIndex !== activeTools.length - 1) {
+    issues.push({
+      toolId: 'checklist',
+      dependentOnId: '',
+      message: "La 'Liste de tâches' post-installation doit être placée à la fin.",
+      type: 'wrong_order'
+    });
+  }
+
+  // Check regular dependencies order
+  for (let i = 0; i < activeTools.length; i++) {
+    const toolId = activeTools[i];
+    const deps = getDependenciesForTool(toolId, config);
+    for (const depId of deps) {
+      const depIndex = activeTools.indexOf(depId);
+      if (depIndex === -1) {
+        // Missing dependency (only warn for specific critical dependencies to avoid forcing system for everything)
+        if (depId === 'node' || depId === 'docker' || depId === 'antigravity') {
+          const toolName = TOOLS_META.find(t => t.id === toolId)?.name || toolId;
+          const depName = TOOLS_META.find(t => t.id === depId)?.name || depId;
+          issues.push({
+            toolId,
+            dependentOnId: depId,
+            message: `L'outil '${toolName}' requiert l'activation de '${depName}' pour son installation.`,
+            type: 'missing'
+          });
+        }
+      } else if (depIndex > i) {
+        const toolName = TOOLS_META.find(t => t.id === toolId)?.name || toolId;
+        const depName = TOOLS_META.find(t => t.id === depId)?.name || depId;
+        issues.push({
+          toolId,
+          dependentOnId: depId,
+          message: `L'outil '${toolName}' est configuré avant '${depName}', alors qu'il en dépend.`,
+          type: 'wrong_order'
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+function sortInstallationTools(activeTools: string[], config: SetupConfig): string[] {
+  const inDegree: Record<string, number> = {};
+  const adjList: Record<string, string[]> = {};
+  const toolsSet = new Set(activeTools);
+
+  // Initialize
+  for (const tool of activeTools) {
+    inDegree[tool] = 0;
+    adjList[tool] = [];
+  }
+
+  // Add edges using predecessors to avoid duplicates
+  for (const tool of activeTools) {
+    const predecessors = new Set<string>();
+    
+    if (tool !== 'system' && toolsSet.has('system')) {
+      predecessors.add('system');
+    }
+    
+    if (tool === 'checklist') {
+      for (const other of activeTools) {
+        if (other !== 'checklist') {
+          predecessors.add(other);
+        }
+      }
+    } else {
+      const deps = getDependenciesForTool(tool, config);
+      for (const dep of deps) {
+        if (toolsSet.has(dep)) {
+          predecessors.add(dep);
+        }
+      }
+    }
+
+    for (const pred of predecessors) {
+      adjList[pred].push(tool);
+      inDegree[tool]++;
+    }
+  }
+
+  // Find all nodes with in-degree 0
+  const originalIndices = new Map<string, number>();
+  activeTools.forEach((tool, idx) => originalIndices.set(tool, idx));
+
+  const queue: string[] = [];
+  for (const tool of activeTools) {
+    if (inDegree[tool] === 0) {
+      queue.push(tool);
+    }
+  }
+
+  // Sort queue by original index to keep it stable
+  queue.sort((a, b) => (originalIndices.get(a) || 0) - (originalIndices.get(b) || 0));
+
+  const result: string[] = [];
+
+  while (queue.length > 0) {
+    const node = queue.shift()!;
+    result.push(node);
+
+    const neighbors = adjList[node] || [];
+    for (const neighbor of neighbors) {
+      inDegree[neighbor]--;
+      if (inDegree[neighbor] === 0) {
+        queue.push(neighbor);
+      }
+    }
+
+    queue.sort((a, b) => (originalIndices.get(a) || 0) - (originalIndices.get(b) || 0));
+  }
+
+  if (result.length !== activeTools.length) {
+    return activeTools;
+  }
+
+  return result;
+}
 
 function App() {
   const [config, setConfig] = useState<SetupConfig>({
@@ -95,6 +302,10 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const dependencyIssues = validateInstallationOrder(activeTools, config);
+  const hasOrderIssues = dependencyIssues.some(issue => issue.type === 'wrong_order');
+  const hasAnyIssues = dependencyIssues.length > 0;
 
   // Helper to extract active tools list based on config values (useful when importing JSON)
   const getActiveToolsFromConfig = (cfg: SetupConfig): string[] => {
@@ -133,6 +344,9 @@ function App() {
     if (cfg.redis?.install) active.push('redis');
     if (cfg.sqlite?.install) active.push('sqlite');
     if (cfg.nginx?.install) active.push('nginx');
+    if (cfg.chrome?.install) active.push('chrome');
+    if (cfg.firefox?.install) active.push('firefox');
+    if (cfg.slack?.install) active.push('slack');
     return active;
   };
 
@@ -228,6 +442,20 @@ function App() {
       updateSubConfig(toolId as any, { install: true });
     }
     setActiveModalTool(toolId);
+  };
+
+  const handleAddMissingDependency = (depId: string) => {
+    if (activeTools.includes(depId)) return;
+    const newActive = [...activeTools, depId];
+    const sorted = sortInstallationTools(newActive, config);
+    setActiveTools(sorted);
+    if (depId === 'git') {
+      updateSubConfig('git', { configure: true });
+    } else if (depId === 'system') {
+      // system config object is already initialized in DEFAULT_CONFIG
+    } else {
+      updateSubConfig(depId as any, { install: true });
+    }
   };
 
   const handleRemoveTool = (toolId: string) => {
@@ -449,9 +677,78 @@ function App() {
         <div className="editor-grid">
           {/* Middle: Drag-and-drop lego baseplate workspace */}
           <section className="workspace-panel">
+            {hasAnyIssues && (
+              <div className="lego-alert-banner" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', width: '100%' }}>
+                  <div className="lego-alert-content" style={{ width: '100%' }}>
+                    <AlertTriangle className="lego-alert-icon" size={20} style={{ marginTop: '3px' }} />
+                    <div className="lego-alert-details" style={{ width: '100%' }}>
+                      <div className="lego-alert-title">
+                        {hasOrderIssues ? "Ajustements requis : Ordre d'installation" : "Ajustements requis : Dépendance manquante"}
+                      </div>
+                      <div className="lego-alert-message" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px', width: '100%' }}>
+                        {dependencyIssues.map((issue, idx) => {
+                          const depMeta = TOOLS_META.find(t => t.id === issue.dependentOnId);
+                          const depName = depMeta?.name || issue.dependentOnId;
+                          return (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', width: '100%' }}>
+                              <span>• {issue.message}</span>
+                              {issue.type === 'missing' && issue.dependentOnId && (
+                                <button
+                                  onClick={() => handleAddMissingDependency(issue.dependentOnId)}
+                                  className="btn-sort-auto"
+                                  style={{
+                                    padding: '4px 10px',
+                                    fontSize: '11px',
+                                    backgroundColor: '#ea580c',
+                                    border: '2px solid #9a3412',
+                                    boxShadow: '1px 1px 0px rgba(154, 52, 18, 0.5)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    textTransform: 'none'
+                                  }}
+                                  title={`Activer et placer automatiquement ${depName} sur la plaque`}
+                                >
+                                  <Plus size={12} />
+                                  <span>Activer {depName}</span>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  {hasOrderIssues && (
+                    <button
+                      onClick={() => {
+                        const sorted = sortInstallationTools(activeTools, config);
+                        setActiveTools(sorted);
+                      }}
+                      className="btn-sort-auto"
+                      style={{ flexShrink: 0 }}
+                      title="Réorganiser automatiquement les briques"
+                    >
+                      <ArrowUpDown size={15} />
+                      <span>Trier dans le bon ordre</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="baseplate-header">
               <div className="stud-pattern-bg"></div>
-              <h3>Plaque de Construction</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h3>Plaque de Construction</h3>
+                {!hasAnyIssues && activeTools.length > 0 && (
+                  <span className="lego-badge-optimal" title="Toutes les briques respectent l'ordre de dépendances !">
+                    <CheckCircle size={12} />
+                    Ordre optimal
+                  </span>
+                )}
+              </div>
               <span>Ordre d'exécution de haut en bas</span>
             </div>
             
@@ -799,23 +1096,82 @@ function App() {
                 )}
 
                 {activeModalTool === 'antigravity' && (
-                  <div className="brick-info-note">
-                    <Info size={14} />
-                    <span>Le framework Google Antigravity sera installé via son script d'installation officiel.</span>
+                  <div className="lego-form-fields">
+                    <div className="lego-field">
+                      <label>Méthode d'installation</label>
+                      <select
+                        value={config.antigravity.installMethod || 'curl'}
+                        onChange={e => updateSubConfig('antigravity', { installMethod: e.target.value as any })}
+                      >
+                        <option value="curl">Script d'installation (curl)</option>
+                        <option value="npm">Gestionnaire de paquets NPM (npm install -g)</option>
+                      </select>
+                    </div>
+                    <div className="brick-info-note">
+                      <Info size={14} />
+                      <span>
+                        {config.antigravity.installMethod === 'npm'
+                          ? "Le framework Google Antigravity sera installé de manière globale via npm."
+                          : "Le framework Google Antigravity sera installé via son script d'installation officiel curl."}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: '15px' }}>
+                      <label className="lego-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={config.antigravity.installIDE || false}
+                          onChange={e => updateSubConfig('antigravity', { installIDE: e.target.checked })}
+                        />
+                        <span className="checkmark"></span>
+                        <span>Installer également l'IDE Antigravity (VS Code Fork)</span>
+                      </label>
+                    </div>
                   </div>
                 )}
 
                 {activeModalTool === 'agy' && (
-                  <div className="brick-info-note">
-                    <Info size={14} />
-                    <span>Le CLI <code>agy</code> sera téléchargé et installé à partir du site officiel d'Antigravity.</span>
+                  <div className="lego-form-fields">
+                    <div className="lego-field">
+                      <label>Méthode d'installation</label>
+                      <select
+                        value={config.agy.installMethod || 'curl'}
+                        onChange={e => updateSubConfig('agy', { installMethod: e.target.value as any })}
+                      >
+                        <option value="curl">Script d'installation (curl)</option>
+                        <option value="npm">Gestionnaire de paquets NPM (npm install -g)</option>
+                      </select>
+                    </div>
+                    <div className="brick-info-note">
+                      <Info size={14} />
+                      <span>
+                        {config.agy.installMethod === 'npm'
+                          ? "Le CLI agy sera installé de manière globale via npm."
+                          : "Le CLI agy sera téléchargé et installé à partir du site officiel d'Antigravity via curl."}
+                      </span>
+                    </div>
                   </div>
                 )}
 
                 {activeModalTool === 'opencode' && (
-                  <div className="brick-info-note">
-                    <Info size={14} />
-                    <span>L'assistant autonome OpenCode sera installé depuis les dépôts officiels.</span>
+                  <div className="lego-form-fields">
+                    <div className="lego-field">
+                      <label>Méthode d'installation</label>
+                      <select
+                        value={config.opencode.installMethod || 'curl'}
+                        onChange={e => updateSubConfig('opencode', { installMethod: e.target.value as any })}
+                      >
+                        <option value="curl">Script d'installation (curl)</option>
+                        <option value="npm">Gestionnaire de paquets NPM (npm install -g)</option>
+                      </select>
+                    </div>
+                    <div className="brick-info-note">
+                      <Info size={14} />
+                      <span>
+                        {config.opencode.installMethod === 'npm'
+                          ? "L'assistant autonome OpenCode sera installé de manière globale via npm."
+                          : "L'assistant autonome OpenCode sera installé depuis les dépôts officiels via curl."}
+                      </span>
+                    </div>
                   </div>
                 )}
 
@@ -1134,6 +1490,27 @@ function App() {
                         />
                       </div>
                     )}
+                  </div>
+                )}
+
+                {activeModalTool === 'chrome' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>Google Chrome sera installé via le paquet officiel .deb téléchargé depuis les serveurs de Google.</span>
+                  </div>
+                )}
+
+                {activeModalTool === 'firefox' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>Firefox sera installé via le gestionnaire de paquets standard apt.</span>
+                  </div>
+                )}
+
+                {activeModalTool === 'slack' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>Slack sera installé via snap (si disponible) ou via le paquet officiel .deb.</span>
                   </div>
                 )}
               </div>

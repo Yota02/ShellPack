@@ -20,7 +20,10 @@ import {
   checklistTemplate,
   agyTemplate,
   antigravityTemplate,
-  opencodeTemplate
+  opencodeTemplate,
+  chromeTemplate,
+  firefoxTemplate,
+  slackTemplate
 } from './templates/tools.js';
 
 export * from './types.js';
@@ -52,7 +55,10 @@ export function generateSetupScript(config: SetupConfig, order?: string[]): stri
     checklist: () => config.checklist ? checklistTemplate(config.checklist) : '',
     agy: () => config.agy ? agyTemplate(config.agy) : '',
     antigravity: () => config.antigravity ? antigravityTemplate(config.antigravity) : '',
-    opencode: () => config.opencode ? opencodeTemplate(config.opencode) : ''
+    opencode: () => config.opencode ? opencodeTemplate(config.opencode) : '',
+    chrome: () => config.chrome ? chromeTemplate(config.chrome) : '',
+    firefox: () => config.firefox ? firefoxTemplate(config.firefox) : '',
+    slack: () => config.slack ? slackTemplate(config.slack) : ''
   };
 
   // Execution order: custom or default
@@ -76,7 +82,10 @@ export function generateSetupScript(config: SetupConfig, order?: string[]): stri
     'checklist',
     'agy',
     'antigravity',
-    'opencode'
+    'opencode',
+    'chrome',
+    'firefox',
+    'slack'
   ];
 
   for (const key of executionOrder) {

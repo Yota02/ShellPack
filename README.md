@@ -6,6 +6,14 @@ Ce projet utilise une architecture **monorepo** avec des workspaces npm, permett
 
 ---
 
+## 📸 Aperçu / Screenshots
+
+| Tableau de bord Lego (Dashboard) | Configuration d'un outil (Ex: Git) |
+| :---: | :---: |
+| ![Tableau de bord Lego](./screenshots/dashboard.png) | ![Configuration d'un outil](./screenshots/config.png) |
+
+---
+
 ## 📁 Structure du Projet
 
 Le projet est divisé en plusieurs packages autonomes situés dans `/packages` :

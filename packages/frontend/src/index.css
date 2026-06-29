@@ -1159,3 +1159,109 @@ body {
   transform: translateY(2px);
   box-shadow: 0 2px 0 var(--border-color);
 }
+
+/* Lego Alert Banner for order verification */
+.lego-alert-banner {
+  background-color: #fffbeb;
+  border: 3px solid #ea580c;
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 4px 4px 0px rgba(234, 88, 12, 0.2);
+  margin-bottom: 8px;
+  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lego-alert-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.lego-alert-icon {
+  color: #ea580c;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.lego-alert-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lego-alert-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #9a3412;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.lego-alert-message {
+  font-size: 13px;
+  color: #ea580c;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.btn-sort-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #ea580c;
+  border: 2px solid #9a3412;
+  border-radius: 8px;
+  color: white;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px rgba(154, 52, 18, 0.5);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-sort-auto:hover {
+  background-color: #d97706;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px rgba(154, 52, 18, 0.6);
+}
+
+.btn-sort-auto:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px rgba(154, 52, 18, 0.6);
+}
+
+/* Lego Optimal Badge */
+.lego-badge-optimal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #f0fdf4;
+  border: 2px solid #16a34a;
+  border-radius: 6px;
+  color: #16a34a;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 1px 1px 0px rgba(22, 163, 74, 0.2);
+}
