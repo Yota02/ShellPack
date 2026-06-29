@@ -1,0 +1,58 @@
+{
+  "os": "ubuntu",
+  "system": {
+    "updatePackages": true,
+    "upgradePackages": false,
+    "installEssentials": true
+  },
+  "git": {
+    "configure": false,
+    "userName": "",
+    "userEmail": "",
+    "defaultBranch": "main"
+  },
+  "zsh": {
+    "install": false,
+    "installOhMyZsh": true,
+    "theme": "robbyrussell",
+    "plugins": [
+      "git",
+      "zsh-autosuggestions",
+      "zsh-syntax-highlighting"
+    ]
+  },
+  "docker": {
+    "install": false,
+    "installCompose": true,
+    "addToGroup": true
+  },
+  "node": {
+    "install": false,
+    "version": "lts",
+    "manager": "nvm",
+    "globalPackages": [
+      "yarn",
+      "pnpm"
+    ]
+  },
+  "python": {
+    "install": false,
+    "installPoetry": true,
+    "installPyenv": false
+  },
+  "go": {
+    "install": false,
+    "version": "1.22.0"
+  },
+  "rust": {
+    "install": false
+  },
+  "vscode": {
+    "install": false,
+    "extensions": []
+  },
+  "neovim": {
+    "install": false,
+    "installKickstart": true
+  }
+}

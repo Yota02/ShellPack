@@ -1,0 +1,20 @@
+{
+  "name": "setup-generator-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build:core": "npm run build --workspace=@setup-generator/core",
+    "build:api": "npm run build --workspace=@setup-generator/api",
+    "build:cli": "npm run build --workspace=@setup-generator/cli",
+    "build:frontend": "npm run build --workspace=@setup-generator/frontend",
+    "dev:api": "npm run dev --workspace=@setup-generator/api",
+    "dev:frontend": "npm run dev --workspace=@setup-generator/frontend",
+    "start:api": "npm run start --workspace=@setup-generator/api"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

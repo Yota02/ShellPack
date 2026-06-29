@@ -1,0 +1,17 @@
+{
+  "name": "@setup-generator/cli",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "setup-generator-cli": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@setup-generator/core": "*",
+    "commander": "^11.1.0"
+  }
+}

@@ -1,0 +1,25 @@
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# Compilation / Build outputs
+dist/
+**/dist/
+target/
+**/target/
+src-tauri/target/
+**/src-tauri/target/
+
+# Local/temporary files
+setup.sh
+*.log
+
+# OS & Editor files
+.DS_Store
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
