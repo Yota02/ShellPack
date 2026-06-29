@@ -1034,3 +1034,128 @@ body {
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* Modal styling */
+.lego-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.lego-modal {
+  background-color: white;
+  border: 4px solid var(--border-color);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 10px 0 var(--border-color), 0 20px 30px rgba(0,0,0,0.15);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  position: relative;
+  transform: translateY(-10px);
+}
+
+.lego-modal-header {
+  padding: 16px 20px;
+  border-bottom: 4px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: white;
+}
+
+/* Color themed modal headers matching the Lego brick */
+.lego-modal.lego-red .lego-modal-header { background-color: var(--lego-red); }
+.lego-modal.lego-orange .lego-modal-header { background-color: var(--lego-orange); }
+.lego-modal.lego-yellow .lego-modal-header { background-color: var(--lego-yellow); color: var(--text-primary); }
+.lego-modal.lego-blue .lego-modal-header { background-color: var(--lego-blue); }
+.lego-modal.lego-green .lego-modal-header { background-color: var(--lego-green); }
+.lego-modal.lego-indigo .lego-modal-header { background-color: var(--lego-indigo); }
+.lego-modal.lego-teal .lego-modal-header { background-color: var(--lego-teal); }
+.lego-modal.lego-rust .lego-modal-header { background-color: var(--lego-rust); }
+.lego-modal.lego-vscode .lego-modal-header { background-color: var(--lego-vscode); }
+.lego-modal.lego-emerald .lego-modal-header { background-color: var(--lego-emerald); }
+
+.lego-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+}
+
+.lego-modal-title h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  color: inherit;
+}
+
+.modal-header-icon {
+  color: inherit;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  color: inherit;
+  line-height: 1;
+  padding: 0;
+  transition: transform 0.1s ease;
+}
+
+.btn-close-modal:hover {
+  transform: scale(1.2);
+}
+
+.lego-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.lego-modal-footer {
+  padding: 16px 24px;
+  border-top: 2px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  background-color: #f8fafc;
+}
+
+.btn-save-modal {
+  background-color: var(--accent-color);
+  color: white;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 20px;
+  border: 3px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 0 var(--border-color);
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.btn-save-modal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--border-color);
+}
+
+.btn-save-modal:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--border-color);
+}

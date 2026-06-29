@@ -22,8 +22,7 @@ import {
   RefreshCw,
   Info,
   Trash2,
-  ChevronDown,
-  ChevronUp,
+  Settings,
   Flame,
   Plus,
   Search,
@@ -65,7 +64,7 @@ const TOOLS_META: ToolMeta[] = [
 function App() {
   const [config, setConfig] = useState<SetupConfig>(DEFAULT_CONFIG);
   const [activeTools, setActiveTools] = useState<string[]>(['system', 'git']);
-  const [expandedTools, setExpandedTools] = useState<Record<string, boolean>>({ system: true });
+  const [activeModalTool, setActiveModalTool] = useState<string | null>(null);
   const [script, setScript] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -157,8 +156,8 @@ function App() {
           updateSubConfig(toolId as any, { install: true });
         }
         
-        // Expand the newly dropped tool by default
-        setExpandedTools(prev => ({ ...prev, [toolId]: true }));
+        // Open the configuration modal for the newly added brick
+        setActiveModalTool(toolId);
 
       } else if (data.action === 'reorder') {
         const sourceIndex = data.index;
@@ -186,7 +185,7 @@ function App() {
     } else {
       updateSubConfig(toolId as any, { install: true });
     }
-    setExpandedTools(prev => ({ ...prev, [toolId]: true }));
+    setActiveModalTool(toolId);
   };
 
   const handleRemoveTool = (toolId: string) => {
@@ -196,13 +195,6 @@ function App() {
     } else {
       updateSubConfig(toolId as any, { install: false });
     }
-  };
-
-  const toggleExpand = (toolId: string) => {
-    setExpandedTools(prev => ({
-      ...prev,
-      [toolId]: !prev[toolId]
-    }));
   };
 
   const handleCopy = async () => {
@@ -262,7 +254,7 @@ function App() {
     if (window.confirm("Voulez-vous vraiment réinitialiser la plaque de Lego ?")) {
       setConfig(DEFAULT_CONFIG);
       setActiveTools(['system', 'git']);
-      setExpandedTools({ system: true });
+      setActiveModalTool(null);
     }
   };
 
@@ -289,6 +281,9 @@ function App() {
     tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tool.desc.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Selected tool meta for the active configuration modal
+  const selectedToolMeta = TOOLS_META.find(t => t.id === activeModalTool);
 
   return (
     <div className="app-container lego-light-theme">
@@ -440,7 +435,6 @@ function App() {
                   const toolMeta = TOOLS_META.find(t => t.id === toolId);
                   if (!toolMeta) return null;
                   const Icon = toolMeta.icon;
-                  const isExpanded = !!expandedTools[toolId];
 
                   return (
                     <React.Fragment key={toolId}>
@@ -448,7 +442,7 @@ function App() {
                       <div
                         draggable
                         onDragStart={(e) => handleDragStart(e, { action: 'reorder', index })}
-                        className={`lego-brick-active ${toolMeta.colorClass} ${isExpanded ? 'expanded' : 'collapsed'}`}
+                        className={`lego-brick-active ${toolMeta.colorClass} collapsed`}
                       >
                         {/* Lego studs on top of the brick */}
                         <div className="brick-studs">
@@ -460,7 +454,7 @@ function App() {
                             <span className="drag-dots">⋮⋮</span>
                           </div>
                           
-                          <div className="brick-title-area" onClick={() => toggleExpand(toolId)}>
+                          <div className="brick-title-area" onClick={() => setActiveModalTool(toolId)} title="Cliquez pour configurer">
                             <Icon size={18} className="brick-icon" />
                             <h4>{toolMeta.name}</h4>
                             <span className="brick-order-badge">#{index + 1}</span>
@@ -468,11 +462,11 @@ function App() {
 
                           <div className="brick-actions">
                             <button
-                              onClick={() => toggleExpand(toolId)}
+                              onClick={() => setActiveModalTool(toolId)}
                               className="btn-brick-action"
-                              title={isExpanded ? "Replier" : "Déplier"}
+                              title="Configurer"
                             >
-                              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                              <Settings size={16} />
                             </button>
                             <button
                               onClick={() => handleRemoveTool(toolId)}
@@ -483,354 +477,6 @@ function App() {
                             </button>
                           </div>
                         </div>
-
-                        {/* Expanded configuration content inside the Lego brick */}
-                        {isExpanded && (
-                          <div className="brick-body animate-fade">
-                            {toolId === 'system' && (
-                              <div className="lego-form-grid">
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.system.updatePackages}
-                                    onChange={e => updateSubConfig('system', { updatePackages: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Mettre à jour apt (<code>apt-get update</code>)</span>
-                                </label>
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.system.upgradePackages}
-                                    onChange={e => updateSubConfig('system', { upgradePackages: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Mettre à niveau les paquets installés (<code>apt-get upgrade</code>)</span>
-                                </label>
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.system.installEssentials}
-                                    onChange={e => updateSubConfig('system', { installEssentials: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Installer dépendances essentielles (curl, git, build-essential)</span>
-                                </label>
-                              </div>
-                            )}
-
-                            {toolId === 'git' && (
-                              <div className="lego-form-fields">
-                                <div className="lego-field">
-                                  <label>Nom d'utilisateur global (user.name)</label>
-                                  <input
-                                    type="text"
-                                    value={config.git.userName || ''}
-                                    onChange={e => updateSubConfig('git', { userName: e.target.value })}
-                                    placeholder="Alexis"
-                                  />
-                                </div>
-                                <div className="lego-field">
-                                  <label>Email global (user.email)</label>
-                                  <input
-                                    type="email"
-                                    value={config.git.userEmail || ''}
-                                    onChange={e => updateSubConfig('git', { userEmail: e.target.value })}
-                                    placeholder="alexis@example.com"
-                                  />
-                                </div>
-                                <div className="lego-field">
-                                  <label>Branche par défaut</label>
-                                  <input
-                                    type="text"
-                                    value={config.git.defaultBranch || 'main'}
-                                    onChange={e => updateSubConfig('git', { defaultBranch: e.target.value })}
-                                    placeholder="main"
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {toolId === 'ghcli' && (
-                              <div className="brick-info-note">
-                                <Info size={14} />
-                                <span>GitHub CLI sera installé depuis les dépôts officiels de GitHub.</span>
-                              </div>
-                            )}
-
-                            {toolId === 'zsh' && (
-                              <div className="lego-form-fields">
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.zsh.installOhMyZsh}
-                                    onChange={e => updateSubConfig('zsh', { installOhMyZsh: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Installer Oh My Zsh (non-interactif)</span>
-                                </label>
-                                
-                                {config.zsh.installOhMyZsh && (
-                                  <>
-                                    <div className="lego-field">
-                                      <label>Thème Oh My Zsh</label>
-                                      <select
-                                        value={config.zsh.theme}
-                                        onChange={e => updateSubConfig('zsh', { theme: e.target.value as any })}
-                                      >
-                                        <option value="robbyrussell">robbyrussell (par défaut)</option>
-                                        <option value="agnoster">agnoster</option>
-                                        <option value="powerlevel10k">powerlevel10k</option>
-                                      </select>
-                                    </div>
-                                    <div className="lego-field">
-                                      <label>Plugins Oh My Zsh</label>
-                                      <div className="lego-checkbox-group">
-                                        <label className="lego-checkbox">
-                                          <input
-                                            type="checkbox"
-                                            checked={config.zsh.plugins.includes('git')}
-                                            onChange={() => toggleZshPlugin('git')}
-                                          />
-                                          <span className="checkmark"></span>
-                                          <span>git</span>
-                                        </label>
-                                        <label className="lego-checkbox">
-                                          <input
-                                            type="checkbox"
-                                            checked={config.zsh.plugins.includes('zsh-autosuggestions')}
-                                            onChange={() => toggleZshPlugin('zsh-autosuggestions')}
-                                          />
-                                          <span className="checkmark"></span>
-                                          <span>zsh-autosuggestions</span>
-                                        </label>
-                                        <label className="lego-checkbox">
-                                          <input
-                                            type="checkbox"
-                                            checked={config.zsh.plugins.includes('zsh-syntax-highlighting')}
-                                            onChange={() => toggleZshPlugin('zsh-syntax-highlighting')}
-                                          />
-                                          <span className="checkmark"></span>
-                                          <span>zsh-syntax-highlighting</span>
-                                        </label>
-                                      </div>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            )}
-
-                            {toolId === 'docker' && (
-                              <div className="lego-form-grid">
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.docker.installCompose}
-                                    onChange={e => updateSubConfig('docker', { installCompose: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Installer Docker Compose</span>
-                                </label>
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.docker.addToGroup}
-                                    onChange={e => updateSubConfig('docker', { addToGroup: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Ajouter l'utilisateur au groupe Docker (sans sudo)</span>
-                                </label>
-                              </div>
-                            )}
-
-                            {toolId === 'node' && (
-                              <div className="lego-form-fields">
-                                <div className="lego-field">
-                                  <label>Gestionnaire de version</label>
-                                  <select
-                                    value={config.node.manager}
-                                    onChange={e => updateSubConfig('node', { manager: e.target.value as any })}
-                                  >
-                                    <option value="nvm">NVM (Node Version Manager)</option>
-                                    <option value="fnm">FNM (Fast Node Manager)</option>
-                                  </select>
-                                </div>
-                                <div className="lego-field">
-                                  <label>Version de Node.js</label>
-                                  <input
-                                    type="text"
-                                    value={config.node.version}
-                                    onChange={e => updateSubConfig('node', { version: e.target.value })}
-                                    placeholder="lts, latest, 20, 22"
-                                  />
-                                </div>
-                                <div className="lego-field">
-                                  <label>Modules globaux NPM (séparés par virgules)</label>
-                                  <input
-                                    type="text"
-                                    value={config.node.globalPackages.join(', ')}
-                                    onChange={e => handleGlobalPackagesChange(e.target.value)}
-                                    placeholder="yarn, pnpm, pm2"
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {toolId === 'python' && (
-                              <div className="lego-form-fields">
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.python.installPoetry}
-                                    onChange={e => updateSubConfig('python', { installPoetry: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Installer Poetry (Gestionnaire de dépendances)</span>
-                                </label>
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.python.installPyenv}
-                                    onChange={e => updateSubConfig('python', { installPyenv: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Installer Pyenv (Gestion de versions de Python)</span>
-                                </label>
-                              </div>
-                            )}
-
-                            {toolId === 'go' && (
-                              <div className="lego-form-fields">
-                                <div className="lego-field">
-                                  <label>Version de Go</label>
-                                  <input
-                                    type="text"
-                                    value={config.go.version}
-                                    onChange={e => updateSubConfig('go', { version: e.target.value })}
-                                    placeholder="1.22.0"
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {toolId === 'rust' && (
-                              <div className="brick-info-note">
-                                <Info size={14} />
-                                <span>Rust sera installé via l'installateur officiel <code>rustup</code>.</span>
-                              </div>
-                            )}
-
-                            {toolId === 'vscode' && (
-                              <div className="lego-form-fields">
-                                <div className="lego-field">
-                                  <label>Extensions recommandées (ID séparés par virgules)</label>
-                                  <input
-                                    type="text"
-                                    value={config.vscode.extensions.join(', ')}
-                                    onChange={e => handleExtensionsChange(e.target.value)}
-                                    placeholder="dbaeumer.vscode-eslint, esbenp.prettier-vscode"
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {toolId === 'neovim' && (
-                              <div className="lego-form-fields">
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.neovim.installKickstart}
-                                    onChange={e => updateSubConfig('neovim', { installKickstart: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Cloner la configuration Kickstart.nvim</span>
-                                </label>
-                              </div>
-                            )}
-
-                            {toolId === 'kubectl' && (
-                              <div className="brick-info-note">
-                                <Info size={14} />
-                                <span>Kubectl sera installé en téléchargeant le binaire stable officiel de Kubernetes.</span>
-                              </div>
-                            )}
-
-                            {toolId === 'terraform' && (
-                              <div className="brick-info-note">
-                                <Info size={14} />
-                                <span>Terraform sera installé à partir du dépôt de packages HashiCorp.</span>
-                              </div>
-                            )}
-
-                            {toolId === 'postgres' && (
-                              <div className="lego-form-fields">
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.postgres.createUserAndDb}
-                                    onChange={e => updateSubConfig('postgres', { createUserAndDb: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Créer un utilisateur et sa base de données associés</span>
-                                </label>
-                                {config.postgres.createUserAndDb && (
-                                  <>
-                                    <div className="lego-field">
-                                      <label>Nom d'utilisateur Postgres</label>
-                                      <input
-                                        type="text"
-                                        value={config.postgres.dbUser || ''}
-                                        onChange={e => updateSubConfig('postgres', { dbUser: e.target.value })}
-                                        placeholder="mon_utilisateur"
-                                      />
-                                    </div>
-                                    <div className="lego-field">
-                                      <label>Nom de la base de données</label>
-                                      <input
-                                        type="text"
-                                        value={config.postgres.dbName || ''}
-                                        onChange={e => updateSubConfig('postgres', { dbName: e.target.value })}
-                                        placeholder="ma_base"
-                                      />
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            )}
-
-                            {toolId === 'mongodb' && (
-                              <div className="brick-info-note">
-                                <Info size={14} />
-                                <span>MongoDB Community Server sera installé à partir des dépôts officiels de MongoDB.</span>
-                              </div>
-                            )}
-
-                            {toolId === 'nginx' && (
-                              <div className="lego-form-fields">
-                                <label className="lego-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={config.nginx.configurePort}
-                                    onChange={e => updateSubConfig('nginx', { configurePort: e.target.checked })}
-                                  />
-                                  <span className="checkmark"></span>
-                                  <span>Changer le port par défaut (actuellement 80)</span>
-                                </label>
-                                {config.nginx.configurePort && (
-                                  <div className="lego-field">
-                                    <label>Port d'écoute Nginx</label>
-                                    <input
-                                      type="number"
-                                      value={config.nginx.port || 80}
-                                      onChange={e => updateSubConfig('nginx', { port: parseInt(e.target.value) || 80 })}
-                                      placeholder="8080"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
 
                       {/* Drop zone below current block */}
@@ -851,7 +497,7 @@ function App() {
             {/* Drag guide */}
             <div className="baseplate-guide">
               <Info size={16} />
-              <span>Pour changer l'ordre d'installation, attrapez le bouton de déplacement (handle) d'une brique et glissez-la vers le haut ou vers le bas.</span>
+              <span>Cliquez sur un bloc pour modifier ses paramètres. Attrapez-le par la poignée de déplacement pour modifier l'ordre d'installation.</span>
             </div>
           </section>
 
@@ -892,6 +538,375 @@ function App() {
           </section>
         </div>
       </main>
+
+      {/* Modal Dialog for Configuration Details */}
+      {activeModalTool && selectedToolMeta && (() => {
+        const Icon = selectedToolMeta.icon;
+        return (
+          <div className="lego-modal-overlay animate-fade" onClick={() => setActiveModalTool(null)}>
+            <div className={`lego-modal ${selectedToolMeta.colorClass}`} onClick={e => e.stopPropagation()}>
+              <div className="lego-modal-header">
+                <div className="lego-modal-title">
+                  <Icon size={20} className="modal-header-icon" />
+                  <h3>Configuration de {selectedToolMeta.name}</h3>
+                </div>
+                <button className="btn-close-modal" onClick={() => setActiveModalTool(null)}>×</button>
+              </div>
+              
+              <div className="lego-modal-body">
+                {activeModalTool === 'system' && (
+                  <div className="lego-form-grid">
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.system.updatePackages}
+                        onChange={e => updateSubConfig('system', { updatePackages: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Mettre à jour apt (<code>apt-get update</code>)</span>
+                    </label>
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.system.upgradePackages}
+                        onChange={e => updateSubConfig('system', { upgradePackages: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Mettre à niveau les paquets installés (<code>apt-get upgrade</code>)</span>
+                    </label>
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.system.installEssentials}
+                        onChange={e => updateSubConfig('system', { installEssentials: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Installer dépendances essentielles (curl, git, build-essential)</span>
+                    </label>
+                  </div>
+                )}
+
+                {activeModalTool === 'git' && (
+                  <div className="lego-form-fields">
+                    <div className="lego-field">
+                      <label>Nom d'utilisateur global (user.name)</label>
+                      <input
+                        type="text"
+                        value={config.git.userName || ''}
+                        onChange={e => updateSubConfig('git', { userName: e.target.value })}
+                        placeholder="Alexis"
+                      />
+                    </div>
+                    <div className="lego-field">
+                      <label>Email global (user.email)</label>
+                      <input
+                        type="email"
+                        value={config.git.userEmail || ''}
+                        onChange={e => updateSubConfig('git', { userEmail: e.target.value })}
+                        placeholder="alexis@example.com"
+                      />
+                    </div>
+                    <div className="lego-field">
+                      <label>Branche par défaut</label>
+                      <input
+                        type="text"
+                        value={config.git.defaultBranch || 'main'}
+                        onChange={e => updateSubConfig('git', { defaultBranch: e.target.value })}
+                        placeholder="main"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {activeModalTool === 'ghcli' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>GitHub CLI sera installé depuis les dépôts officiels de GitHub.</span>
+                  </div>
+                )}
+
+                {activeModalTool === 'zsh' && (
+                  <div className="lego-form-fields">
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.zsh.installOhMyZsh}
+                        onChange={e => updateSubConfig('zsh', { installOhMyZsh: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Installer Oh My Zsh (non-interactif)</span>
+                    </label>
+                    
+                    {config.zsh.installOhMyZsh && (
+                      <>
+                        <div className="lego-field">
+                          <label>Thème Oh My Zsh</label>
+                          <select
+                            value={config.zsh.theme}
+                            onChange={e => updateSubConfig('zsh', { theme: e.target.value as any })}
+                          >
+                            <option value="robbyrussell">robbyrussell (par défaut)</option>
+                            <option value="agnoster">agnoster</option>
+                            <option value="powerlevel10k">powerlevel10k</option>
+                          </select>
+                        </div>
+                        <div className="lego-field">
+                          <label>Plugins Oh My Zsh</label>
+                          <div className="lego-checkbox-group">
+                            <label className="lego-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={config.zsh.plugins.includes('git')}
+                                onChange={() => toggleZshPlugin('git')}
+                              />
+                              <span className="checkmark"></span>
+                              <span>git</span>
+                            </label>
+                            <label className="lego-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={config.zsh.plugins.includes('zsh-autosuggestions')}
+                                onChange={() => toggleZshPlugin('zsh-autosuggestions')}
+                              />
+                              <span className="checkmark"></span>
+                              <span>zsh-autosuggestions</span>
+                            </label>
+                            <label className="lego-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={config.zsh.plugins.includes('zsh-syntax-highlighting')}
+                                onChange={() => toggleZshPlugin('zsh-syntax-highlighting')}
+                              />
+                              <span className="checkmark"></span>
+                              <span>zsh-syntax-highlighting</span>
+                            </label>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {activeModalTool === 'docker' && (
+                  <div className="lego-form-grid">
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.docker.installCompose}
+                        onChange={e => updateSubConfig('docker', { installCompose: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Installer Docker Compose</span>
+                    </label>
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.docker.addToGroup}
+                        onChange={e => updateSubConfig('docker', { addToGroup: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Ajouter l'utilisateur au groupe Docker (sans sudo)</span>
+                    </label>
+                  </div>
+                )}
+
+                {activeModalTool === 'node' && (
+                  <div className="lego-form-fields">
+                    <div className="lego-field">
+                      <label>Gestionnaire de version</label>
+                      <select
+                        value={config.node.manager}
+                        onChange={e => updateSubConfig('node', { manager: e.target.value as any })}
+                      >
+                        <option value="nvm">NVM (Node Version Manager)</option>
+                        <option value="fnm">FNM (Fast Node Manager)</option>
+                      </select>
+                    </div>
+                    <div className="lego-field">
+                      <label>Version de Node.js</label>
+                      <input
+                        type="text"
+                        value={config.node.version}
+                        onChange={e => updateSubConfig('node', { version: e.target.value })}
+                        placeholder="lts, latest, 20, 22"
+                      />
+                    </div>
+                    <div className="lego-field">
+                      <label>Modules globaux NPM (séparés par virgules)</label>
+                      <input
+                        type="text"
+                        value={config.node.globalPackages.join(', ')}
+                        onChange={e => handleGlobalPackagesChange(e.target.value)}
+                        placeholder="yarn, pnpm, pm2"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {activeModalTool === 'python' && (
+                  <div className="lego-form-fields">
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.python.installPoetry}
+                        onChange={e => updateSubConfig('python', { installPoetry: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Installer Poetry (Gestionnaire de dépendances)</span>
+                    </label>
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.python.installPyenv}
+                        onChange={e => updateSubConfig('python', { installPyenv: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Installer Pyenv (Gestion de versions de Python)</span>
+                    </label>
+                  </div>
+                )}
+
+                {activeModalTool === 'go' && (
+                  <div className="lego-form-fields">
+                    <div className="lego-field">
+                      <label>Version de Go</label>
+                      <input
+                        type="text"
+                        value={config.go.version}
+                        onChange={e => updateSubConfig('go', { version: e.target.value })}
+                        placeholder="1.22.0"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {activeModalTool === 'rust' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>Rust sera installé via l'installateur officiel <code>rustup</code>.</span>
+                  </div>
+                )}
+
+                {activeModalTool === 'vscode' && (
+                  <div className="lego-form-fields">
+                    <div className="lego-field">
+                      <label>Extensions recommandées (ID séparés par virgules)</label>
+                      <input
+                        type="text"
+                        value={config.vscode.extensions.join(', ')}
+                        onChange={e => handleExtensionsChange(e.target.value)}
+                        placeholder="dbaeumer.vscode-eslint, esbenp.prettier-vscode"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {activeModalTool === 'neovim' && (
+                  <div className="lego-form-fields">
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.neovim.installKickstart}
+                        onChange={e => updateSubConfig('neovim', { installKickstart: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Cloner la configuration Kickstart.nvim</span>
+                    </label>
+                  </div>
+                )}
+
+                {activeModalTool === 'kubectl' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>Kubectl sera installé en téléchargeant le binaire stable officiel de Kubernetes.</span>
+                  </div>
+                )}
+
+                {activeModalTool === 'terraform' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>Terraform sera installé à partir du dépôt de packages HashiCorp.</span>
+                  </div>
+                )}
+
+                {activeModalTool === 'postgres' && (
+                  <div className="lego-form-fields">
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.postgres.createUserAndDb}
+                        onChange={e => updateSubConfig('postgres', { createUserAndDb: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Créer un utilisateur et sa base de données associés</span>
+                    </label>
+                    {config.postgres.createUserAndDb && (
+                      <>
+                        <div className="lego-field">
+                          <label>Nom d'utilisateur Postgres</label>
+                          <input
+                            type="text"
+                            value={config.postgres.dbUser || ''}
+                            onChange={e => updateSubConfig('postgres', { dbUser: e.target.value })}
+                            placeholder="mon_utilisateur"
+                          />
+                        </div>
+                        <div className="lego-field">
+                          <label>Nom de la base de données</label>
+                          <input
+                            type="text"
+                            value={config.postgres.dbName || ''}
+                            onChange={e => updateSubConfig('postgres', { dbName: e.target.value })}
+                            placeholder="ma_base"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {activeModalTool === 'mongodb' && (
+                  <div className="brick-info-note">
+                    <Info size={14} />
+                    <span>MongoDB Community Server sera installé à partir des dépôts officiels de MongoDB.</span>
+                  </div>
+                )}
+
+                {activeModalTool === 'nginx' && (
+                  <div className="lego-form-fields">
+                    <label className="lego-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={config.nginx.configurePort}
+                        onChange={e => updateSubConfig('nginx', { configurePort: e.target.checked })}
+                      />
+                      <span className="checkmark"></span>
+                      <span>Changer le port par défaut (actuellement 80)</span>
+                    </label>
+                    {config.nginx.configurePort && (
+                      <div className="lego-field">
+                        <label>Port d'écoute Nginx</label>
+                        <input
+                          type="number"
+                          value={config.nginx.port || 80}
+                          onChange={e => updateSubConfig('nginx', { port: parseInt(e.target.value) || 80 })}
+                          placeholder="8080"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="lego-modal-footer">
+                <button className="btn-save-modal" onClick={() => setActiveModalTool(null)}>
+                  Enregistrer et Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
