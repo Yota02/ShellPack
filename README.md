@@ -73,14 +73,31 @@ Le serveur expose :
 Les configurations de packaging sont intégrées dans le package `packages/frontend`.
 
 ### Bureau (Tauri)
+Tauri vous permet de compiler l'application de bureau sous forme de binaire natif pour Linux (Ubuntu et Debian), générant un package `.deb` et un fichier `.AppImage`.
+
+#### 1. Installer les dépendances système de build
+Avant de lancer le build ou le développement de l'application de bureau sous Linux, vous devez installer les outils de compilation et les bibliothèques système nécessaires (comme WebKit2GTK et GTK+3). Un script automatisé est disponible à la racine du monorepo :
+```bash
+./install-tauri-deps.sh
+```
+
+#### 2. Lancer en mode développement de bureau
 Pour lancer l'application en mode développement Desktop :
 ```bash
-npm run tauri dev --workspace=@setup-generator/frontend
+npm run dev:desktop
 ```
-Pour compiler le build final de production de bureau :
+*(Équivalent à : `npm run tauri dev --workspace=@setup-generator/frontend`)*
+
+#### 3. Compiler pour la production (générer les paquets .deb / .AppImage)
+Pour générer les binaires et paquets d'installation finaux pour Linux :
 ```bash
-npm run tauri build --workspace=@setup-generator/frontend
+npm run build:desktop
 ```
+*(Équivalent à : `npm run tauri build --workspace=@setup-generator/frontend`)*
+
+Les paquets `.deb` et `.AppImage` générés se trouveront dans le dossier :
+`packages/frontend/src-tauri/target/release/bundle/`
+
 
 ### Mobile Android (Capacitor)
 Pour synchroniser les modifications web avec le projet Android :

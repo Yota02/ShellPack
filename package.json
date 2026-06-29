@@ -12,6 +12,8 @@
     "build:frontend": "npm run build --workspace=@setup-generator/frontend",
     "dev:api": "npm run dev --workspace=@setup-generator/api",
     "dev:frontend": "npm run dev --workspace=@setup-generator/frontend",
+    "dev:desktop": "npm run tauri dev --workspace=@setup-generator/frontend",
+    "build:desktop": "npm run tauri build --workspace=@setup-generator/frontend",
     "start:api": "npm run start --workspace=@setup-generator/api"
   },
   "devDependencies": {
