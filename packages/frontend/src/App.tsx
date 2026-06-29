@@ -560,7 +560,7 @@ function App() {
       {/* Left Sidebar: Lego Box (Palette of tools) */}
       <aside className="sidebar">
         <div className="logo-section">
-          <Flame className="logo-icon" />
+          <img src="/logo.png" alt="LegoSetup" className="logo-icon" />
           <h2>LegoSetup</h2>
         </div>
         
