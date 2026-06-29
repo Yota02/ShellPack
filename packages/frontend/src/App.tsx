@@ -48,10 +48,7 @@ const TOOLS_META: ToolMeta[] = [
   { id: 'git', name: 'Git', desc: 'Configuration identité et init de dépôts', icon: GitBranch, colorClass: 'lego-orange' },
   { id: 'ghcli', name: 'GitHub CLI', desc: 'Outil de ligne de commande GitHub (gh)', icon: GitPullRequest, colorClass: 'lego-orange' },
   { id: 'zsh', name: 'Zsh & Shell', desc: 'Installe Zsh, Oh My Zsh et thèmes', icon: Cpu, colorClass: 'lego-yellow' },
-  { id: 'checklist', name: 'Liste de tâches', desc: 'Rappels post-install', icon: ListTodo, colorClass: 'lego-yellow' },
-  { id: 'antigravity', name: 'Antigravity', desc: 'Framework d\'agents IA Google Antigravity', icon: Flame, colorClass: 'lego-red' },
-  { id: 'agy', name: 'agy CLI', desc: 'Interface CLI pour piloter Antigravity', icon: Terminal, colorClass: 'lego-orange' },
-  { id: 'opencode', name: 'OpenCode', desc: 'Assistant autonome de dev OpenCode', icon: Code, colorClass: 'lego-green' },
+  { id: 'checklist', name: 'Liste de tâches', desc: 'Rappels post-install (ex: agy, antigravity, opencode)', icon: ListTodo, colorClass: 'lego-yellow' },
   { id: 'docker', name: 'Docker', desc: 'Moteur Docker et Docker Compose', icon: Container, colorClass: 'lego-blue' },
   { id: 'node', name: 'Node.js', desc: 'Versions Node via NVM/FNM et pkgs', icon: Code, colorClass: 'lego-green' },
   { id: 'python', name: 'Python', desc: 'Python 3, Poetry et gestionnaire Pyenv', icon: Binary, colorClass: 'lego-indigo' },
@@ -67,20 +64,14 @@ const TOOLS_META: ToolMeta[] = [
 ];
 
 function App() {
-  // Pre-load active blocks for system, git, antigravity, agy, opencode to match user's default request
-  const [config, setConfig] = useState<SetupConfig>({
-    ...DEFAULT_CONFIG,
-    antigravity: { install: true },
-    agy: { install: true },
-    opencode: { install: true }
-  });
-  const [activeTools, setActiveTools] = useState<string[]>(['system', 'git', 'antigravity', 'agy', 'opencode']);
+  const [config, setConfig] = useState<SetupConfig>(DEFAULT_CONFIG);
+  const [activeTools, setActiveTools] = useState<string[]>(['system', 'git', 'checklist']);
   const [activeModalTool, setActiveModalTool] = useState<string | null>(null);
   const [script, setScript] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper to extract active tools list based on config values (useful when importing JSON)
@@ -91,9 +82,6 @@ function App() {
     if (cfg.ghcli?.install) active.push('ghcli');
     if (cfg.zsh?.install) active.push('zsh');
     if (cfg.checklist?.install) active.push('checklist');
-    if (cfg.agy?.install) active.push('agy');
-    if (cfg.antigravity?.install) active.push('antigravity');
-    if (cfg.opencode?.install) active.push('opencode');
     if (cfg.docker?.install) active.push('docker');
     if (cfg.node?.install) active.push('node');
     if (cfg.python?.install) active.push('python');
@@ -170,7 +158,7 @@ function App() {
         } else {
           updateSubConfig(toolId as any, { install: true });
         }
-        
+
         // Open the configuration modal for the newly added brick
         setActiveModalTool(toolId);
 
@@ -180,11 +168,11 @@ function App() {
 
         const newActive = [...activeTools];
         const [removed] = newActive.splice(sourceIndex, 1);
-        
+
         // Adjust targetIndex if it shifts after removal
         const adjustedTarget = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
         newActive.splice(adjustedTarget, 0, removed);
-        
+
         setActiveTools(newActive);
       }
     } catch (err) {
@@ -268,7 +256,7 @@ function App() {
   const resetConfig = () => {
     if (window.confirm("Voulez-vous vraiment réinitialiser la plaque de Lego ?")) {
       setConfig(DEFAULT_CONFIG);
-      setActiveTools(['system', 'git', 'antigravity', 'agy', 'opencode']);
+      setActiveTools(['system', 'git', 'checklist']);
       setActiveModalTool(null);
     }
   };
@@ -308,7 +296,7 @@ function App() {
           <Flame className="logo-icon" />
           <h2>LegoSetup</h2>
         </div>
-        
+
         {/* Search bar inside the Lego palette box */}
         <div className="search-bar-container">
           <div className="search-input-wrapper">
@@ -347,8 +335,8 @@ function App() {
                       <div className="brick-desc">{tool.desc}</div>
                     </div>
                     {!isActive && (
-                      <button 
-                        onClick={() => handleAddToolDirectly(tool.id)} 
+                      <button
+                        onClick={() => handleAddToolDirectly(tool.id)}
                         className="btn-add-brick"
                         title="Ajouter à la fin"
                       >
@@ -396,7 +384,7 @@ function App() {
                 </button>
               </div>
             </div>
-            
+
             <button onClick={handleExportJSON} className="btn-secondary" title="Exporter la configuration">
               <Download size={15} />
               <span>Exporter</span>
@@ -427,7 +415,7 @@ function App() {
               <h3>Plaque de Construction</h3>
               <span>Ordre d'exécution de haut en bas</span>
             </div>
-            
+
             <div className="lego-baseplate">
               {/* Top drop zone */}
               <div
@@ -468,7 +456,7 @@ function App() {
                           <div className="brick-drag-handle" title="Glisser pour réordonner">
                             <span className="drag-dots">⋮⋮</span>
                           </div>
-                          
+
                           <div className="brick-title-area" onClick={() => setActiveModalTool(toolId)} title="Cliquez pour configurer">
                             <Icon size={18} className="brick-icon" />
                             <h4>{toolMeta.name}</h4>
@@ -567,7 +555,7 @@ function App() {
                 </div>
                 <button className="btn-close-modal" onClick={() => setActiveModalTool(null)}>×</button>
               </div>
-              
+
               <div className="lego-modal-body">
                 {activeModalTool === 'system' && (
                   <div className="lego-form-grid">
@@ -651,7 +639,7 @@ function App() {
                       <span className="checkmark"></span>
                       <span>Installer Oh My Zsh (non-interactif)</span>
                     </label>
-                    
+
                     {config.zsh.installOhMyZsh && (
                       <>
                         <div className="lego-field">
@@ -708,11 +696,11 @@ function App() {
                       <Info size={14} />
                       <span>Ces tâches s'afficheront à la fin de l'exécution du script d'installation sous forme de liste manuelle à cocher.</span>
                     </div>
-                    
+
                     <label className="lego-field-label" style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
                       Étapes manuelles post-installation :
                     </label>
-                    
+
                     <div className="todo-items-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
                       {config.checklist.tasks.map((task, idx) => (
                         <div key={idx} className="todo-item-input-row" style={{ display: 'flex', gap: '8px' }}>
@@ -724,7 +712,7 @@ function App() {
                               updated[idx] = e.target.value;
                               updateSubConfig('checklist', { tasks: updated });
                             }}
-                            placeholder="Ex: Tâche"
+                            placeholder="Ex: Authentifier agy"
                             className="todo-input"
                             style={{ flexGrow: 1, padding: '8px', border: '2px solid var(--border-color)', borderRadius: '6px' }}
                           />
@@ -742,7 +730,7 @@ function App() {
                         </div>
                       ))}
                     </div>
-                    
+
                     <button
                       onClick={() => {
                         const updated = [...config.checklist.tasks, ''];
@@ -754,27 +742,6 @@ function App() {
                       <Plus size={14} />
                       <span>Ajouter une étape</span>
                     </button>
-                  </div>
-                )}
-
-                {activeModalTool === 'antigravity' && (
-                  <div className="brick-info-note">
-                    <Info size={14} />
-                    <span>Le framework Google Antigravity sera installé via son script d'installation officiel.</span>
-                  </div>
-                )}
-
-                {activeModalTool === 'agy' && (
-                  <div className="brick-info-note">
-                    <Info size={14} />
-                    <span>Le CLI <code>agy</code> sera téléchargé et installé à partir du site officiel d'Antigravity.</span>
-                  </div>
-                )}
-
-                {activeModalTool === 'opencode' && (
-                  <div className="brick-info-note">
-                    <Info size={14} />
-                    <span>L'assistant autonome OpenCode sera installé depuis les dépôts officiels.</span>
                   </div>
                 )}
 
@@ -988,7 +955,7 @@ function App() {
                   </div>
                 )}
               </div>
-              
+
               <div className="lego-modal-footer">
                 <button className="btn-save-modal" onClick={() => setActiveModalTool(null)}>
                   Enregistrer et Fermer

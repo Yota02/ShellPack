@@ -80,7 +80,7 @@ export const zshTemplate = (config: SetupConfig['zsh']): string => {
   script += `    log_info "Changement du shell par défaut vers Zsh..."\n`;
   script += `    sudo chsh -s "\$(which zsh)" "\$USER"\n`;
   script += `fi\n`;
-  
+
   script += `log_success "Zsh installé et configuré !"\n`;
   return script;
 };
@@ -120,7 +120,7 @@ export const dockerTemplate = (config: SetupConfig['docker']): string => {
 export const nodeTemplate = (config: SetupConfig['node']): string => {
   if (!config.install) return '';
   let script = `\n# --- Installation de Node.js ---\n`;
-  
+
   if (config.manager === 'nvm') {
     script += `if [ ! -d "$HOME/.nvm" ]; then\n`;
     script += `    log_info "Installation de NVM (Node Version Manager)..."\n`;
@@ -128,7 +128,7 @@ export const nodeTemplate = (config: SetupConfig['node']): string => {
     script += `fi\n`;
     script += `export NVM_DIR="$HOME/.nvm"\n`;
     script += `[ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"\n`;
-    
+
     const nodeVer = config.version === 'lts' ? '--lts' : (config.version === 'latest' ? 'node' : config.version);
     script += `log_info "Installation de Node.js (${config.version}) via NVM..."\n`;
     script += `nvm install ${nodeVer}\n`;
@@ -141,7 +141,7 @@ export const nodeTemplate = (config: SetupConfig['node']): string => {
     script += `    export PATH="$HOME/.local/share/fnm:$PATH"\n`;
     script += `    eval "\$(fnm env --use-on-cd)"\n`;
     script += `fi\n`;
-    
+
     const nodeVer = config.version === 'lts' ? '--lts' : (config.version === 'latest' ? 'latest' : config.version);
     script += `log_info "Installation de Node.js (${config.version}) via FNM..."\n`;
     script += `fnm install ${nodeVer}\n`;

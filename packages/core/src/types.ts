@@ -104,6 +104,65 @@ export interface OpencodeOptions {
   install: boolean;
 }
 
+export interface BunOptions {
+  install: boolean;
+}
+
+export interface DenoOptions {
+  install: boolean;
+}
+
+export interface PHPOptions {
+  install: boolean;
+  installComposer: boolean;
+}
+
+export interface RubyOptions {
+  install: boolean;
+  installRbenv: boolean;
+}
+
+export interface JavaOptions {
+  install: boolean;
+  version: '8' | '11' | '17' | '21' | string;
+}
+
+export interface AwsCLIOptions {
+  install: boolean;
+}
+
+export interface GCloudOptions {
+  install: boolean;
+}
+
+export interface AnsibleOptions {
+  install: boolean;
+}
+
+export interface HelmOptions {
+  install: boolean;
+}
+
+export interface MinikubeOptions {
+  install: boolean;
+}
+
+export interface RedisOptions {
+  install: boolean;
+}
+
+export interface SQLiteOptions {
+  install: boolean;
+}
+
+export interface LazygitOptions {
+  install: boolean;
+}
+
+export interface TmuxOptions {
+  install: boolean;
+}
+
 export interface SetupConfig {
   os: OSTarget;
   system: BaseSystemOptions;
@@ -126,6 +185,20 @@ export interface SetupConfig {
   agy: AgyOptions;
   antigravity: AntigravityOptions;
   opencode: OpencodeOptions;
+  bun: BunOptions;
+  deno: DenoOptions;
+  php: PHPOptions;
+  ruby: RubyOptions;
+  java: JavaOptions;
+  awscli: AwsCLIOptions;
+  gcloud: GCloudOptions;
+  ansible: AnsibleOptions;
+  helm: HelmOptions;
+  minikube: MinikubeOptions;
+  redis: RedisOptions;
+  sqlite: SQLiteOptions;
+  lazygit: LazygitOptions;
+  tmux: TmuxOptions;
 }
 
 export interface ToolMetadata {
@@ -208,6 +281,20 @@ export const TOOLS_METADATA: ToolMetadata[] = [
     icon: 'Code'
   },
   {
+    id: 'bun',
+    name: 'Bun',
+    description: 'Installe le runtime JS/TS rapide Bun.',
+    category: 'languages',
+    icon: 'Code'
+  },
+  {
+    id: 'deno',
+    name: 'Deno',
+    description: 'Installe le runtime JS/TS moderne et sécurisé Deno.',
+    category: 'languages',
+    icon: 'Code'
+  },
+  {
     id: 'python',
     name: 'Python',
     description: 'Installe Python 3, Pip, Poetry pour la gestion de dépendances et Pyenv.',
@@ -225,6 +312,27 @@ export const TOOLS_METADATA: ToolMetadata[] = [
     id: 'rust',
     name: 'Rust',
     description: 'Installe Rust via rustup (rustc, cargo).',
+    category: 'languages',
+    icon: 'Package'
+  },
+  {
+    id: 'php',
+    name: 'PHP & Composer',
+    description: 'Installe PHP et le gestionnaire de dépendances Composer.',
+    category: 'languages',
+    icon: 'FileCode'
+  },
+  {
+    id: 'ruby',
+    name: 'Ruby',
+    description: 'Installe le langage Ruby de manière globale ou avec rbenv.',
+    category: 'languages',
+    icon: 'Package'
+  },
+  {
+    id: 'java',
+    name: 'Java (OpenJDK)',
+    description: 'Installe le kit de développement OpenJDK Java.',
     category: 'languages',
     icon: 'Package'
   },
@@ -257,6 +365,41 @@ export const TOOLS_METADATA: ToolMetadata[] = [
     icon: 'Grid'
   },
   {
+    id: 'awscli',
+    name: 'AWS CLI',
+    description: 'Installe l\'interface de ligne de commande officielle AWS.',
+    category: 'devops',
+    icon: 'Layers'
+  },
+  {
+    id: 'gcloud',
+    name: 'Google Cloud CLI',
+    description: 'Installe l\'interface de ligne de commande officielle Google Cloud SDK.',
+    category: 'devops',
+    icon: 'Layers'
+  },
+  {
+    id: 'ansible',
+    name: 'Ansible',
+    description: 'Installe l\'outil d\'automatisation de configuration Ansible.',
+    category: 'devops',
+    icon: 'Cpu'
+  },
+  {
+    id: 'helm',
+    name: 'Helm',
+    description: 'Installe le gestionnaire de paquets Kubernetes Helm.',
+    category: 'devops',
+    icon: 'Anchor'
+  },
+  {
+    id: 'minikube',
+    name: 'Minikube',
+    description: 'Installe un cluster local Kubernetes à nœud unique.',
+    category: 'devops',
+    icon: 'Container'
+  },
+  {
     id: 'postgres',
     name: 'PostgreSQL',
     description: 'Installe le serveur de base de données relationnelle PostgreSQL.',
@@ -271,11 +414,39 @@ export const TOOLS_METADATA: ToolMetadata[] = [
     icon: 'Database'
   },
   {
+    id: 'redis',
+    name: 'Redis',
+    description: 'Installe le magasin de stockage de données en mémoire cache Redis.',
+    category: 'devops',
+    icon: 'Database'
+  },
+  {
+    id: 'sqlite',
+    name: 'SQLite',
+    description: 'Installe le moteur de base de données embarqué et léger SQLite3.',
+    category: 'devops',
+    icon: 'Database'
+  },
+  {
     id: 'nginx',
     name: 'Nginx',
     description: 'Installe le serveur web et proxy inverse Nginx.',
     category: 'devops',
     icon: 'Globe'
+  },
+  {
+    id: 'lazygit',
+    name: 'LazyGit',
+    description: 'Installe l\'interface graphique de terminal simple pour Git.',
+    category: 'system',
+    icon: 'GitBranch'
+  },
+  {
+    id: 'tmux',
+    name: 'Tmux',
+    description: 'Installe le multiplexeur de terminaux Tmux pour gérer plusieurs sessions.',
+    category: 'system',
+    icon: 'Terminal'
   }
 ];
 
@@ -309,6 +480,12 @@ export const DEFAULT_CONFIG: SetupConfig = {
     manager: 'nvm',
     globalPackages: ['yarn', 'pnpm']
   },
+  bun: {
+    install: false
+  },
+  deno: {
+    install: false
+  },
   python: {
     install: false,
     installPoetry: true,
@@ -320,6 +497,18 @@ export const DEFAULT_CONFIG: SetupConfig = {
   },
   rust: {
     install: false
+  },
+  php: {
+    install: false,
+    installComposer: true
+  },
+  ruby: {
+    install: false,
+    installRbenv: true
+  },
+  java: {
+    install: false,
+    version: '17'
   },
   vscode: {
     install: false,
@@ -338,6 +527,21 @@ export const DEFAULT_CONFIG: SetupConfig = {
   terraform: {
     install: false
   },
+  awscli: {
+    install: false
+  },
+  gcloud: {
+    install: false
+  },
+  ansible: {
+    install: false
+  },
+  helm: {
+    install: false
+  },
+  minikube: {
+    install: false
+  },
   postgres: {
     install: false,
     createUserAndDb: false,
@@ -345,6 +549,12 @@ export const DEFAULT_CONFIG: SetupConfig = {
     dbName: ''
   },
   mongodb: {
+    install: false
+  },
+  redis: {
+    install: false
+  },
+  sqlite: {
     install: false
   },
   nginx: {
@@ -366,6 +576,12 @@ export const DEFAULT_CONFIG: SetupConfig = {
     install: false
   },
   opencode: {
+    install: false
+  },
+  lazygit: {
+    install: false
+  },
+  tmux: {
     install: false
   }
 };
