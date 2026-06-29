@@ -560,8 +560,8 @@ function App() {
       {/* Left Sidebar: Lego Box (Palette of tools) */}
       <aside className="sidebar">
         <div className="logo-section">
-          <img src="/logo.png" alt="LegoSetup" className="logo-icon" />
-          <h2>LegoSetup</h2>
+          <img src="/logo.png" alt="ShellPack" className="logo-icon" />
+          <h2>ShellPack</h2>
         </div>
         
         {/* Search bar inside the Lego palette box */}
